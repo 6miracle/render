@@ -1,0 +1,27 @@
+cmake_minimum_required(VERSION 3.15)
+project(Render LANGUAGES C CXX)
+
+# 设置c++标准
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_EXTENSIONS OFF)
+# set(BUILD_TEST ON)
+
+#设置输出路径
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
+
+set(CMAKE_BUILD_TYPE RELEASE)
+
+
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.h src/*.hpp )
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+# if(BUILD_TEST)
+# add_executable(test_triangle "test/triangle_test.cpp" ${SOURCES})
+# endif()
+
+target_precompile_headers(${PROJECT_NAME} PRIVATE src/pch.h)
+target_include_directories(${PROJECT_NAME} PUBLIC  src vendor)
+# target_link_libraries(${PROJECT_NAME} 
