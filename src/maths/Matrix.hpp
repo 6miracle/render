@@ -21,21 +21,24 @@ public:
     // template<typename ...Args>
     // Mat<row, column>& operator<<(Args... args);
     Mat<row, column> operator*(double val);
+    Vec<row> operator*(Vec<column> vec);
     Mat<row, column> operator/(double val);
 
     // 运算
     template<size_t num> 
     Mat<row, num> operator*(Mat<column, num>& mat) {
         Mat<row, num> res;
-        for(size_t i = 0; i < column; ++i) {
+        for(size_t i = 0; i < row; ++i) {
             double result = 0;
-            for(size_t j = 0; j < num; ++i) {
+            for(size_t j = 0; j < num; ++j) {
                 for(size_t t = 0; t < column; ++t) {
-                    result += array_[i][j] * mat[i][j]; 
+                    result += array_[i][t] * mat[t][j]; 
                 }
+                res << result;
+                result = 0;
             }
-            res << result;
         }
+        return res;
     }
 
     double* operator[](int i)  {
@@ -68,14 +71,7 @@ Mat<row, column>& Mat<row, column>::operator<<(double val) {
     }
     return *this;
 }
-// template<size_t row, size_t column>
-// Mat<row, column>& Mat<row, column>::operator<<(int val) {
-//     if(nums_ < column * row) {
-//         array_[nums_ / column][nums_ % column] = val;
-//         ++nums_;
-//     }
-//     return *this;
-// }
+
 
 template<size_t row, size_t column>
 Mat<row, column>& Mat<row, column>::operator<<(Vec<column> vec) {
@@ -101,6 +97,16 @@ Mat<row, column> Mat<row, column>::operator*(double val) {
         }
     }
     return mat;
+}
+template<size_t row, size_t column>
+Vec<row> Mat<row, column>::operator*(Vec<column> vec) {
+    Vec<row> res;
+    for(size_t i = 0; i < row; ++i) {
+        for(size_t j = 0; j < column; ++j) {
+            res[i] += array_[i][j] * vec[j];
+        }
+    }
+    return res;
 }
 
 template<size_t row, size_t column>
@@ -155,11 +161,6 @@ std::ostream& operator<<(std::ostream& os, Mat<row, column> mat) {
 using Mat3 = Mat<3, 3>;
 using Mat4 = Mat<4, 4>;
 
-
-// Mat4 modelMatrix() {
-//     Mat4 mat;
-//     mat << 
-// }
 }
 
 #endif

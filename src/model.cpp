@@ -43,15 +43,14 @@ Model::Model(const std::string& path) {
                 face_tex.push_back(y - 1);
                 face_nor.push_back(z - 1);
             }
-            // for(size_t i = 2; i < vec.size(); ++i) {
-            //     mat << vec[0] << vec[i - 1] << vec[i];
-            // }
             faces.push_back(mat);
         } else {
             ASSERT(false, "INVALID");
         }
     }
     loadTexture(path, "_diffuse.tga", diffuseMap);
+    loadTexture(path, "_nm.tga", normalMap);
+    loadTexture(path, "_specular.tga", specularMap);
 }
 
 std::string Model::ToString() const {

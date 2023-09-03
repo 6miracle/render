@@ -24,7 +24,7 @@ struct TGAHeader {
 #pragma pack(pop)
 
 struct TGAColor {
-    uint8_t bgra[4];
+    uint8_t bgra[4]{0};
     uint8_t bytespp = 4;
     uint8_t& operator[](const int i) { return bgra[i]; }
 };

@@ -30,7 +30,6 @@ public:
     double norm2() const { return  (*this) * (*this);}
     Vec<N> normalized() const { return *this / norm(); }
 
-
     double* data()  { return array_; }
     // 维度
     constexpr size_t dimension() const { return N; }
@@ -49,7 +48,7 @@ public:
     double z() const;
 
 private:
-    double array_[N];
+    double array_[N] = {0};
 };
 
 
@@ -192,9 +191,20 @@ double Vec<N>::z() const {
     return array_[2];
 }
 
+
 using Vec2 = Vec<2>;
 using Vec3 = Vec<3>;
 using Vec4 = Vec<4>;
+
+inline Vec4 local2homo(Vec3 vec) {
+    return {vec[0], vec[1], vec[2], 1.0};
+}
+inline Vec3 homo2local(Vec4 vec) {
+    return {vec[0], vec[1], vec[2]};
+}
+inline Vec4 localvhomo(Vec3 vec) {
+    return {vec[0], vec[1], vec[2], 0.0};
+}
 
 }
 #endif

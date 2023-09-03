@@ -19,6 +19,7 @@ public:
 
     Vec3 node(int i) { return nodes[i]; }
     Vec3 node(int face, int i) { return nodes[face_node[face * 3 + i]]; }
+    Vec3 normal(int face, int i) { return normals[face_nor[face * 3 + i]]; }
     Vec2 uv(int face, int i) { return textures[face_tex[face * 3 + i]]; }
     const TGAImage& diffuse() { return diffuseMap; }
     const TGAImage& specular() { return specularMap; }

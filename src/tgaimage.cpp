@@ -204,8 +204,8 @@ bool TGAImage::write_rle_data(std::ofstream& out) const {
 }
 
 TGAColor TGAImage::get(const int w, const int h) const {
-    if(!data_.size() || w < 0 || h < 0 || w * h * bpp_ >= w_ * h_ * bpp_) {
-         LOG("set error, size = %zu w = %d, h = %d", data_.size(), w, h);
+    if(!data_.size() || w < 0 || h < 0 || w >= w_ || h >= h_) {
+        //  LOG("set error, size = %zu w = %d, h = %d", data_.size(), w, h);
         return TGAColor();
     }
     TGAColor color = {0, 0, 0, 0, bpp_};
@@ -218,7 +218,7 @@ TGAColor TGAImage::get(const int w, const int h) const {
 
 void TGAImage::set(const int w, const int h,const  TGAColor& color) {
     if(!data_.size() || w < 0 || h < 0 || w >= w_ || h >= h_) {
-        LOG("set error, size = %zu w = %d, h = %d", data_.size(), w, h);
+        // LOG("set error, size = %zu w = %d, h = %d", data_.size(), w, h);
         return ;
     }
     size_t nbyte = (w + h * w_) * bpp_;

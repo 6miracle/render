@@ -6,6 +6,8 @@
 #include <vector>
 #include <cstring>
 #include <fstream>
+#include <cmath>
+#include <numbers>
 
 #include "util.h"
 #endif
