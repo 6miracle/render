@@ -1,4 +1,5 @@
 #include "model.h"
+#include "tgaimage.h"
 #include <algorithm>
 #include <fstream>
 #include <ostream>
@@ -50,7 +51,8 @@ Model::Model(const std::string& path) {
     }
     loadTexture(path, "_diffuse.tga", diffuseMap);
     loadTexture(path, "_nm.tga", normalMap);
-    loadTexture(path, "_specular.tga", specularMap);
+    loadTexture(path, "_spec.tga", specularMap);
+    loadTexture(path, "_nm_tangent.tga", normalTanMap);
 }
 
 std::string Model::ToString() const {
@@ -76,5 +78,26 @@ void Model::loadTexture(const std::string& filename, const std::string suffix, T
     std::string texfile = filename.substr(0, dot) + suffix;
     std::cout <<"LoadTexture: " << texfile << ( image.read_tga_file(texfile) ? " ok" : " fail" ) << "\n";
     image.flip_vertically();
+}
+
+Vec3 Model::normal(Vec2 uv) {
+    TGAColor color = normalMap.get(uv.x() * normalMap.width(), uv.y() * normalMap.height());
+    Vec3 vec;
+    for(int i = 0; i < 3; ++i) {
+        vec[2 - i] = color[i] / 255.0 * 2.0 - 1.0;
+    }
+    return vec;
+}
+double Model::specular(Vec2 uv) {
+    return specularMap.get(uv.x() * specularMap.width(), uv.y() * specularMap.height())[0] / 1.0;
+}
+
+Vec3 Model::normalTan(Vec2 uv) {
+    TGAColor color = normalTanMap.get(uv.x() * normalTanMap.width(), uv.y() * normalTanMap.height());
+    Vec3 vec;
+    for(int i = 0; i < 3; ++i) {
+        vec[2 - i] = color[i] / 255.0 * 2.0 - 1.0;
+    }
+    return vec;
 }
 }

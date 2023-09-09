@@ -9,8 +9,10 @@ template<size_t row, size_t column>
 class Mat {
 public:
     Mat() = default;
+    Mat(const std::initializer_list<double>& lists);
     // 转置
-    Mat<column, row> Transpose();
+    Mat<column, row> transpose();
+    Mat<row, column> invert(); 
 
     size_t columns()  { return column; }
     size_t rows() { return rows; }
@@ -23,6 +25,8 @@ public:
     Mat<row, column> operator*(double val);
     Vec<row> operator*(Vec<column> vec);
     Mat<row, column> operator/(double val);
+
+    void clear();
 
     // 运算
     template<size_t num> 
@@ -50,19 +54,97 @@ private:
     size_t nums_ = 0;
 };
 
+template<size_t row, size_t column> 
+Mat<row, column>::Mat(const std::initializer_list<double>& lists) {
+    for(auto& val : lists) {
+        array_[nums_ / column][nums_ % column] = val;
+        ++nums_;
+    }
+}
+
 // 转置
 template<size_t row, size_t column> 
-Mat<column, row> Mat<row, column>::Transpose() {
+Mat<column, row> Mat<row, column>::transpose() {
     Mat<column, row> mat;
     for(size_t i = 0; i < column; ++i) {
         for(size_t j = 0; j < row; ++j) {
-            mat << array_[i][j];
+            mat << array_[j][i];
         }
+
     }
     return mat;
 }
 
+// 求逆
+template<size_t row, size_t column> 
+Mat<row, column> Mat<row, column>::invert()  {
+    ASSERT(row == column, " row must equal to column");
+    Mat<column, column> l, u;
+    l[0][0] = l[1][1] = l[2][2] = l[3][3] = 1;
+    for(size_t k = 0; k < row; ++k) {
+        //  std::cout << " k =" << k <<"\n";
+        // 求u
+        for(size_t j = k; j < row; ++j) {
+            u[k][j] = array_[k][j];
+            for(size_t i = 0; i < k; ++i) {
+                u[k][j] -= l[k][i] * u[i][j];
+            }
+        }
+        // std::cout << " k =" << k <<"\n";
+        // 求l
+        for(size_t j = k + 1; j < row; ++j) {
+            l[j][k] = array_[j][k];
+            for(size_t i = 0; i < k; ++i) {
+                l[j][k] -= l[j][i] * u[i][k];
+            }
+            ASSERT(u[k][k] != 0, "sa");
+            l[j][k] /= u[k][k];
+        }
+    }
+    
+    // 求l,u的逆
+    Mat<column, column> ll, uu;
 
+    for(size_t i = 0; i < row; ++i) {
+        for(size_t j = 0; j < row; ++j) {
+            if(i == j) { ll << 1; }
+            else if(i < j) { ll << 0; }
+            else if(i > j) {
+                 double tmp = 0;
+                for(size_t k = j; k <= i - 1; ++k) {
+                    tmp += l[i][k] * ll[k][j];
+                }
+                ll << -tmp; 
+            }
+        }
+    }
+    for(int j = 0; j < row ; ++j) {
+        for(int i = row - 1; i >= 0; --i) {
+            if(i == j) { uu[i][j] =  1.0 / u[i][j];  }
+            else if(i < j) {
+                double tmp = 0;
+                for(size_t k = i + 1; k <= j; ++k) {
+                    tmp += u[i][k] * uu[k][j];
+                }
+                uu[i][j] =  tmp / (-u[i][i]);
+            } else if(i > j) { uu[i][j] = 0; }
+        }
+    }
+
+    return uu * ll;
+}
+template<size_t row, size_t column>
+std::ostream& operator<<(std::ostream& os, Mat<row, column> mat) {
+    for(size_t i = 0; i < row; ++i) {
+        for(size_t j = 0; j < column; ++j) {
+            os << mat[i][j];
+            if(j != column - 1) { os << "\\"; }
+        }
+        os << " ";
+    }
+    // os << "\n";
+    return os;
+}
 template<size_t row, size_t column>
 Mat<row, column>& Mat<row, column>::operator<<(double val) {
     if(nums_ < column * row) {
@@ -130,18 +212,9 @@ Mat<row, column> Mat<row, column>::operator/(double val) {
     }
     return mat;
 }
-
 template<size_t row, size_t column>
-std::ostream& operator<<(std::ostream& os, Mat<row, column> mat) {
-    for(size_t i = 0; i < row; ++i) {
-        for(size_t j = 0; j < column; ++j) {
-            os << mat[i][j];
-            if(j != column - 1) { os << "\\"; }
-        }
-        os << " ";
-    }
-    // os << "\n";
-    return os;
+void Mat<row, column>::clear() {
+    nums_ = 0;
 }
 
 

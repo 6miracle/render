@@ -132,8 +132,10 @@ void triangle(Vec4 *vecs, IShader &shader, TGAImage &image, TGAImage &zbuffer) {
             if(frag_depth > zbuffer.get(i, j).bgra[0]) {
                 zbuffer.set(i,j, TGAColor{(uint8_t)(frag_depth), (uint8_t)frag_depth, (uint8_t)(frag_depth), 255});
                 TGAColor color;
-                shader.fragment(vec, color);
-                image.set(i, j, color);
+                bool flag = shader.fragment(vec, color);
+                if(!flag) {
+                    image.set(i, j, color);
+                }
             }
         }
     }

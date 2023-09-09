@@ -15,13 +15,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
 set(CMAKE_BUILD_TYPE RELEASE)
 
 
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.h src/*.hpp )
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# if(BUILD_TEST)
-# add_executable(test_triangle "test/triangle_test.cpp" ${SOURCES})
-# endif()
 
-target_precompile_headers(${PROJECT_NAME} PRIVATE src/pch.h)
-target_include_directories(${PROJECT_NAME} PUBLIC  src vendor)
-# target_link_libraries(${PROJECT_NAME} 
+include_directories(vendor/include)
+link_directories(vendor/lib)
+
+target_precompile_headers(${PROJECT_NAME} PUBLIC src/pch.h)
+target_include_directories(${PROJECT_NAME} PUBLIC  src )
+# target_link_directories(${PROJECT_NAME} PUBLIC vendor/lib)
+target_link_libraries(${PROJECT_NAME} glfw3) 

@@ -20,9 +20,15 @@ public:
     Vec3 node(int i) { return nodes[i]; }
     Vec3 node(int face, int i) { return nodes[face_node[face * 3 + i]]; }
     Vec3 normal(int face, int i) { return normals[face_nor[face * 3 + i]]; }
+    Vec3 normal(Vec2 uv);
+
+    Vec3 normalTan(Vec2 uv);
+
     Vec2 uv(int face, int i) { return textures[face_tex[face * 3 + i]]; }
     const TGAImage& diffuse() { return diffuseMap; }
+    TGAColor diffuse(Vec2 uv) { return diffuseMap.get(uv.x() * diffuseMap.width(), uv.y() * diffuseMap.height());}
     const TGAImage& specular() { return specularMap; }
+    double specular(Vec2 uv);
     std::string ToString() const;
 
     size_t nfaces() const { return faces.size(); }
@@ -53,6 +59,8 @@ private:
     TGAImage normalMap{};
     // 高光贴图
     TGAImage specularMap{};
+
+    TGAImage normalTanMap{};
 };
 }
 

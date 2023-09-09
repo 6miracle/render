@@ -258,4 +258,13 @@ int TGAImage::width() const {
 int TGAImage::height() const {
     return h_;
 }
+
+
+TGAColor& TGAColor::operator*(double val) {
+    bgra[0] = (uint8_t)(bgra[0] * val);
+    bgra[1] = (uint8_t)(bgra[1] * val);
+    bgra[2] = (uint8_t)(bgra[2] * val);
+    bgra[3] = (uint8_t)(bgra[3] * val);
+    return *this;
+}
 }
