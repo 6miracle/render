@@ -42,6 +42,8 @@ public:
     }
     Vec<N> operator-(const Vec<N>& vec);
     Vec<N> operator+(const Vec<N>& vec);
+    Vec<N>& operator+=(const Vec<N>& vec);
+    Vec<N>& operator-=(const Vec<N>& vec);
 
     double x() const;
     double y() const;
@@ -124,7 +126,23 @@ Vec<N> Vec<N>::operator+(const Vec<N>& vec) {
     }   
     return res;
 }
+template<size_t N>
+Vec<N>& Vec<N>::operator+=(const Vec<N>& vec) {
+    for(size_t i = 0; i < N; ++i) {
+        array_[i] += vec[i];
+    }
+    return *this;
+}
+
 // 减法
+template<size_t N>
+Vec<N>& Vec<N>::operator-=(const Vec<N>& vec) {
+    for(size_t i = 0; i < N; ++i) {
+        array_[i] -= vec[i];
+    }
+    return *this;
+}
+
 template<>
 inline Vec<2> Vec<2>::operator-(const Vec<2>& vec) {
     return {array_[0] - vec.array_[0], array_[1] - vec.array_[1]};

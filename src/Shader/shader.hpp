@@ -1,6 +1,6 @@
 #pragma once
 
-#include "model.h"
+#include "Engine/Model/model.h"
 #include "pch.h"
 #include "maths/maths.hpp"
 #include "Engine/gl.h"

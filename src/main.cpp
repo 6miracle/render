@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cmath>
 #include <fstream>
+#include <gl/GL.h>
 #include <limits>
 #include <ostream>
 #include <stdint.h>
@@ -190,7 +191,46 @@ private:
 
 int main() {
   render::Window window;
-  window.draw();
+  
+  model = new render::Model("../obj/african_head.obj");
+
+  render::modelmatrix(0);
+  render::viewMatrix(eye, center, up);
+  render::projectionMatrix(-1.f/(eye-center).norm());
+  render::viewPortMatrix(width * 3 / 4, height * 3 / 4);
+
+  light_dir = light_dir.normalized();
+
+  render::TGAImage image(width, height, 3);
+  render::TGAImage zbuffer(width, height, 1);
+  render::PhongShader shader(model);
+
+  for (int i = 0; i < model->nfaces(); i++) { 
+    render::Vec4 screen_coords[3]; 
+    for (int j = 0; j < 3; j++) { 
+      screen_coords[j] = shader.vertex(i, j);
+    } 
+    triangle(screen_coords, shader, image, zbuffer); 
+    // os << model->node(i, 0) << "\n" << model->node(i, 1) << "\n" << model->node(i, 2) << "\n";
+  }
+  image.write_tga_file("example.tga");
+  zbuffer.write_tga_file("example.depth.tga");
+  window.init();
+  window.draw(image);
+  // for(int i = 0; i < image.width(); i ++) {
+  //       for(int j = 0; j < image.height(); ++j) {
+  //           render::TGAColor color = image.get(i, j);
+  //           // glColor3f(1.0 * color[2] / 255.0, 1.0 * color[1] / 255.0, 1.0 * color[0] / 255.0);
+  //           // glVertex3f(i, j, 0.0);
+  //           if(color[0] != 0) {
+  //             std::cout << "color: " << (int)color[0] << " " << (int)color[1] << " " << (int)color[2] << '\n';
+  //           }
+  //       }
+  //   }
+  // image.write_tga_file("example.tga");
+  // zbuffer.write_tga_file("example.depth.tga");
+  delete model;
+
 }
 
 
@@ -275,15 +315,21 @@ int main() {
 //     // }
 
 //     // /* Make the window's context current */
-//     // glfwMakeContextCurrent(window);
-
+//     glfwMakeContextCurrent(window);
+//     glPointSize(100.f);
 //     // /* Loop until the user closes the window */
 //     while (!glfwWindowShouldClose(window))
 //     {
 //         /* Render here */
 //         // glClear(GL_COLOR_BUFFER_BIT);
 //         // glbegin();
-//         /* Swap front and back buffers */
+//         /* Swap front and back buffers */\
+
+//         glBegin(GL_POINTS);
+//         glColor3f(1.0f, 0.0f, 0.0f);
+//         glVertex3f(0.f, 0.f, 0.f);
+//         glEnd();
+        
 //         glfwSwapBuffers(window);
 
 //         /* Poll for and process events */

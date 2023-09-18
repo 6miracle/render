@@ -1,29 +1,33 @@
 #ifndef __RENDER_WINDOW_H__
 #define __RENDER_WINDOW_H__
 
+#include "Engine/camera/camera.h"
 #include "GLFW/glfw3.h"
+#include "GLFW/glfw3native.h"
 #include "pch.h"
+#include "tgaimage.h"
 #include "util.h"
 
 namespace render {
-    class Window {
-    public:
-        Window(int width = 800, int height = 800, const char* title = "window") {
-            glfwInit();
-            window = glfwCreateWindow(width, height, title, nullptr, nullptr);
-            if(!window) {
-                glfwTerminate();
-                LOG_ERROR("glfwCreateWindow Error");
-            }
-            glfwMakeContextCurrent(window);
-        }
-        ~Window();
+#define ASSERT1(x) if(!(x)) exit(0);
+#define GL_CHECK(x) GLClearError(); \
+        x; \
+        ASSERT1(GLGetError(#x, __FILE__, __LINE__)); 
 
-        void draw();
-        void update();
-    private:
-        GLFWwindow* window;
-    };
+class Window {
+public:
+    Window(int width = 800, int height = 800, const char* title = "window");
+    ~Window();
+    void init();
+    void draw(TGAImage& image);
+    void update(TGAImage& image);
+    void processInput();
+private:
+    GLFWwindow* window_;
+    int width_;
+    int height_;
+    std::string title_;
+};
 }
 
 #endif

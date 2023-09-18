@@ -15,15 +15,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME})
 set(CMAKE_BUILD_TYPE RELEASE)
 
 
-
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp src/*.h src/*.hpp )
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-
+include_directories(vendor)
 include_directories(vendor/include)
 link_directories(vendor/lib)
 
 target_precompile_headers(${PROJECT_NAME} PUBLIC src/pch.h)
 target_include_directories(${PROJECT_NAME} PUBLIC  src )
 # target_link_directories(${PROJECT_NAME} PUBLIC vendor/lib)
-target_link_libraries(${PROJECT_NAME} glfw3) 
+target_link_libraries(${PROJECT_NAME} PUBLIC opengl32  H:/code/render/vendor/lib/glfw3.dll) 

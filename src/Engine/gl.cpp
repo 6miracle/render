@@ -1,5 +1,4 @@
 #include "gl.h"
-#include "GL/gl.h"
 #include "maths/Matrix.hpp"
 #include "maths/maths.hpp"
 #include "tgaimage.h"
@@ -67,6 +66,7 @@ void projectionMatrix(double eye_fov, double aspect_ratio, double  zNear, double
         0,  zNear / h, 0, 0,
         0, 0, (zNear + zFar) / (zNear - zFar), 2 * zNear * zFar / (zFar - zNear),
         0, 0, 1, 0;
+    
 }
 
 void projectionMatrix(double val) {
