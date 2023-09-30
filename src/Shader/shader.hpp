@@ -3,58 +3,63 @@
 #include "Engine/Model/model.h"
 #include "pch.h"
 #include "maths/maths.hpp"
-#include "Engine/gl.h"
+#include "Engine/Render.h"
 #include "tgaimage.h"
 
 namespace render { 
 
 // 获取zbuffer的空shader
-class DepthShader: public IShader {
-public:
-  DepthShader(Model* model): model_(model) {}
-  Vec4 vertex(int face, int nthvert) override {
-    return viewportmat * projectionmat * viewportmat * modelmat * local2homo(model_->node(face, nthvert) );
-  }
-  bool fragment(Vec3 vec, TGAColor& color) override {
-    return false;
-  } 
-private:
-  Model* model_;
-};
+// class DepthShader: public IShader {
+// public:
+//   DepthShader(Model* model): model_(model) {}
+//   Vec4 vertex(int face, int nthvert) override {
+//     return viewportmat * projectionmat * viewportmat * modelmat * local2homo(model_->node(face, nthvert) );
+//   }
+//   bool fragment(Vec3 vec, TGAColor& color) override {
+//     return false;
+//   } 
+// private:
+//   Model* model_;
+// };
+class TriangleShader: public render::IShader {
 
+};
 
 // Gouraud shading + blinn-phong反射模型, 根据每个顶点发现求出顶点颜色然后插值
 class GouraudShader: public render::IShader {
 public:
-    GouraudShader(Model* model): model_(model) {
-      uniform_M = viewmat * modelmat;
-      uniform_MIT = (projectionmat * viewmat * modelmat).invert().transpose();
-    }
+    // GouraudShader(Model& model): model_(model) {
+    // }
+
     Vec4 vertex(int face, int nthvert) {
       Vec4 node = render::local2homo(model_->node(face, nthvert));
       uvs[nthvert] = model_->uv(face , nthvert);
-      return render::viewportmat * render::projectionmat * render::viewmat * render::modelmat* node;
+      uniform_M = map_["view"] * map_["model"];
+      uniform_MIT = (map_["projection"] * map_["view"] * map_["model"]).invert().transpose();
+      return map_["projection"] * map_["view"] * map_["model"]* node;
       // intensity_[nthvert] = std::max(0., model_->normal(face , nthvert) * light_dir);
       // return node;
     }
     bool fragment(Vec3 vec, render::TGAColor& color) {
       Vec2 uv = uvs[0] * vec[0] + uvs[1] * vec[1] + uvs[2] * vec[2];
-      Vec3 n = homo2local(uniform_MIT * localvhomo(model_->normal(uv))).normalized();
-      Vec3 l = homo2local(uniform_M * localvhomo(light_dir)).normalized();
+    //   Vec3 n = homo2local(uniform_MIT * localvhomo(model_->normal(uv))).normalized();
+    //   Vec3 l = homo2local(uniform_M * localvhomo(light_dir)).normalized();
 
-      Vec3 r = (2. * n * (n * l ) - l).normalized();
+    //   Vec3 r = (2. * n * (n * l ) - l).normalized();
       
-      double diff = std::max(0., n * l);
-      double specular = pow(std::max(r.z(), 0.), model_->specular(uv));
-      TGAColor diffuseColor = model_->diffuse(uv);
-      for(int i = 0; i < 3; ++i) color[i] = std::min(255.,(5 + diffuseColor[i] * (diff + .6 * specular)));
-      color[3] = 255;
+    //   double diff = std::max(0., n * l);
+    //   double specular = pow(std::max(r.z(), 0.), model_->specular(uv));
+    //   TGAColor diffuseColor = model_->diffuse(uv);
+    //   // color =  model_->diffuse(uv);
+    //   for(int i = 0; i < 3; ++i) color[i] = std::min(255.,(5 + diffuseColor[i] * (3 * diff + 6 * specular)));
+    //   color[3] = 255;
+      // for(int i = 0; i < 4; ++i) color[i] = 255;
+      color = model_->diffuse(uv);
       return false;
     } 
 private:
       Vec3 intensity_;
       Vec2 uvs[3];
-      Model* model_;
       Mat4 uniform_M;
       Mat4 uniform_MIT;
 };
@@ -64,14 +69,14 @@ private:
 class PhongShader:public IShader {
 public:
   PhongShader(Model* model): model_(model) {
-    mvp = viewportmat * projectionmat * viewmat * modelmat;
-    uniform_MIT = (projectionmat * viewmat * modelmat).invert().transpose();
-    uniform_M = viewmat * modelmat;
   }
   Vec4 vertex(int face, int nthvert) override {
     triangle_[nthvert] = local2homo(model_->node(face, nthvert));
     uvs[nthvert] = model_->uv(face, nthvert);
-    return mvp * triangle_[nthvert];
+    uniform_M = map_["view"] * map_["model"];
+    mvp = map_["projectio"] * uniform_M;
+    uniform_MIT = mvp.invert().transpose();
+    return  mvp * triangle_[nthvert];
   }
 
   bool fragment(Vec3 vec, TGAColor& color) override {
@@ -129,14 +134,15 @@ class ShadowShader: public IShader {
 public:
   ShadowShader(Model* model, Mat4 mvp_light, render::TGAImage& buffer)
   : model_(model), mvpLight_(mvp_light), buffer_(buffer) {
-    uniform_M = viewmat * modelmat;
-    uniform_MIT = (projectionmat * uniform_M).invert().transpose();
   }
    virtual Vec4 vertex(int face, int nthvert) {
       Vec4 node = render::local2homo(model_->node(face, nthvert));
       triangles[nthvert] = node;
       uvs[nthvert] = model_->uv(face , nthvert);
-      return render::viewportmat * render::projectionmat * render::viewmat * render::modelmat* node;
+      uniform_M = map_["view"] * map_["model"];
+      Mat4 mvp = map_["projection"] * uniform_M;
+      uniform_MIT = mvp.invert().transpose();
+      return mvp * node;
   }
   virtual bool fragment(Vec3 vec, render::TGAColor& color)  {
       Vec2 uv = uvs[0] * vec[0] + uvs[1] * vec[1] + uvs[2] * vec[2];

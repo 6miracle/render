@@ -1,0 +1,7 @@
+{
+    "name":"floor",
+    "scale": 1,
+    "rotate":0,
+    "translate":[0, 0, 0],
+    "mesh":"../assets/obj/floor/floor.obj"
+}

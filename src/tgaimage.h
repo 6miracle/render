@@ -2,6 +2,7 @@
 #define __RENDER_TGAIMAGE_H__
 #include "pch.h"
 #include <fstream>
+#include <stdint.h>
 namespace render  {
 
 // TGA扩展文件结构（v2.0）由五部分组成：文件头、图像/颜色表数据、开发者自定义区域、扩展区域和文件尾。
@@ -48,6 +49,9 @@ public:
     int width() const;
     int height() const;
 
+    void clear() { 
+        std::fill(data_.begin(), data_.end(), 0);
+    }
 private:
     bool load_rle_data(std::ifstream& in);
     bool write_rle_data(std::ofstream& out) const;

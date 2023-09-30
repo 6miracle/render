@@ -30,7 +30,7 @@ public:
 
     // 运算
     template<size_t num> 
-    Mat<row, num> operator*(Mat<column, num>& mat) {
+    Mat<row, num> operator*(const Mat<column, num>& mat) {
         Mat<row, num> res;
         for(size_t i = 0; i < row; ++i) {
             double result = 0;
@@ -45,7 +45,11 @@ public:
         return res;
     }
 
-    double* operator[](int i)  {
+    const double* operator[] (int i) const {
+        ASSERT(i < N, "访问越界");
+        return array_[i];
+    }
+    double* operator[](int i) {
         ASSERT(i < N, "访问越界");
         return array_[i];
     }
@@ -137,10 +141,10 @@ template<size_t row, size_t column>
 std::ostream& operator<<(std::ostream& os, Mat<row, column> mat) {
     for(size_t i = 0; i < row; ++i) {
         for(size_t j = 0; j < column; ++j) {
-            os << mat[i][j];
-            if(j != column - 1) { os << "\\"; }
+            os << mat[i][j] << " ";
+            // if(j != column - 1) { os << ""; }
         }
-        os << " ";
+        os << "\n";
     }
     // os << "\n";
     return os;
@@ -180,6 +184,8 @@ Mat<row, column> Mat<row, column>::operator*(double val) {
     }
     return mat;
 }
+
+
 template<size_t row, size_t column>
 Vec<row> Mat<row, column>::operator*(Vec<column> vec) {
     Vec<row> res;

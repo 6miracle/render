@@ -5,13 +5,39 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include "nlohmann/json.hpp"
 
 
 namespace render {
+// 平移
+Mat4 translate(Vec3 vec);
+// 旋转
+Mat4 rotate(double angle);
+// 缩放
+Mat4 scale(Vec3 vec);
+
+// model
+// 读取json
 Model::Model(const std::string& path) {
+    std::ifstream ifs(path);
+    nlohmann::json data = nlohmann::json::parse(ifs);
+    modelMatrix_ = translate(Vec3{data["translate"][0].template get<double>(), 
+    data["translate"][1].template get<double>(), data["translate"][2].template get<double>()});
+    modelMatrix_ = modelMatrix_ * rotate(data["rotate"].template get<double>());
+    if(data["scale"].is_number()) {
+        double num = data["scale"].get<double>();
+        modelMatrix_ = modelMatrix_ * scale(Vec3{num, num, num});
+    } else {
+        modelMatrix_ = modelMatrix_ * scale(Vec3{data["scale"][0].get<double>(), 
+            data["scale"][1].get<double>(),data["scale"][2].get<double>(),});
+    }
+    loadObj(data["mesh"]);
+}
+// 加载模型
+void Model::loadObj(const std::string& path) {
     std::ifstream is(path);
     ASSERT(is.is_open(), "文件打开失败");
-
+    std::cout << path << '\n';
     // std::ofstream os("ex1.txt");
     std::string str;
     while(std::getline(is, str)) {
@@ -99,5 +125,34 @@ Vec3 Model::normalTan(Vec2 uv) {
         vec[2 - i] = color[i] / 255.0 * 2.0 - 1.0;
     }
     return vec;
+}
+
+
+// 平移矩阵
+Mat4 translate(Vec3 vec) {
+    Mat4 mat;
+    mat << 1, 0, 0, vec.x(),
+          0, 1, 0, vec.y(),
+          0, 0, 1, vec.z(),
+          0, 0, 0, 1;
+    return mat;
+}
+// 旋转矩阵 (默认绕y轴转)
+Mat4 rotate(double angle) {
+    Mat4 mat;
+    mat << std::cos(angle), 0, std::sin(angle), 0,
+        0, 1, 0, 0,
+        -std::sin(angle), 0, std::cos(angle), 0,
+        0, 0, 0, 1;
+    return mat;
+}
+// 缩放矩阵 
+Mat4 scale(Vec3 vec) {
+    Mat4 mat;
+    mat << vec.x(), 0, 0,0,
+            0, vec.y(), 0, 0,
+            0, 0, vec.z(), 0,
+            0, 0, 0, 1;
+    return mat;
 }
 }

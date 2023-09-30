@@ -44,6 +44,7 @@ public:
     Vec<N> operator+(const Vec<N>& vec);
     Vec<N>& operator+=(const Vec<N>& vec);
     Vec<N>& operator-=(const Vec<N>& vec);
+    Vec<N>& operator/=(double val);
 
     double x() const;
     double y() const;
@@ -129,7 +130,7 @@ Vec<N> Vec<N>::operator+(const Vec<N>& vec) {
 template<size_t N>
 Vec<N>& Vec<N>::operator+=(const Vec<N>& vec) {
     for(size_t i = 0; i < N; ++i) {
-        array_[i] += vec[i];
+        array_[i] += vec.array_[i];
     }
     return *this;
 }
@@ -138,7 +139,7 @@ Vec<N>& Vec<N>::operator+=(const Vec<N>& vec) {
 template<size_t N>
 Vec<N>& Vec<N>::operator-=(const Vec<N>& vec) {
     for(size_t i = 0; i < N; ++i) {
-        array_[i] -= vec[i];
+        array_[i] -= vec.array_[i];
     }
     return *this;
 }
@@ -165,6 +166,14 @@ Vec<N> operator/(Vec<N> v1, double val) {
         vec[i] = v1[i] / val;
     }
     return vec;
+}
+template<size_t N> 
+Vec<N>& Vec<N>::operator/=(double val) {
+    ASSERT(val != 0, "divide by zero error");
+    for(int i = 0; i < N; ++i) {
+        array_[i] /= val;
+    }
+    return *this;
 }
 template<size_t N> 
 Vec<N> operator*(Vec<N> v1, double val) {

@@ -16,7 +16,6 @@ class Model {
 public:
     Model(const std::string& path);
     // bool Load(const std::string& path);
-
     Vec3 node(int i) { return nodes[i]; }
     Vec3 node(int face, int i) { return nodes[face_node[face * 3 + i]]; }
     Vec3 normal(int face, int i) { return normals[face_nor[face * 3 + i]]; }
@@ -35,6 +34,8 @@ public:
     Mat3 face(size_t i) const { return faces[i]; }
 
     void loadTexture(const std::string& filename, const std::string suffix, TGAImage& image);
+    void loadObj(const std::string& path);
+    Mat4 model() { return modelMatrix_; }
     void test(std::ofstream& os) {
        for(size_t i = 0; i < face_tex.size(); i +=3) {
         os << face_tex[i] << " " << face_tex[i + 1] << " " << face_tex[i + 2] << "\n";
@@ -43,6 +44,7 @@ public:
         os << textures[i] << "\n";
        }
     }
+
 private:    
     std::vector<Vec3> nodes;
     std::vector<Vec2> textures;
@@ -61,6 +63,7 @@ private:
     TGAImage specularMap{};
 
     TGAImage normalTanMap{};
+    Mat4 modelMatrix_;
 };
 }
 
