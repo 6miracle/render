@@ -1,5 +1,7 @@
 #include "camera.h"
 #include "Engine/camera/camera.h"
+#include "util.h"
+#include <sstream>
 
 namespace render {
 Camera* Camera::camera_ = nullptr;
@@ -7,7 +9,6 @@ static Mat4 lookAt(Vec3 position, Vec3 center, Vec3 up) {
     Vec3 zaxis = (position - center).normalized();
     Vec3 xaxis = (up.normalized().cross(zaxis)).normalized();
     Vec3 yaxis = (zaxis.cross(xaxis)).normalized();
-    // std::cout << "x =" << xaxis << "y = " << yaxis << "z = " << zaxis <<'\n';
     Mat4 modelmat;
     Mat4 viewmat;
     modelmat << xaxis.x(), xaxis.y(), xaxis.z(), 0,
@@ -74,7 +75,6 @@ Mat4 Camera::getViewMatrix() {
      return lookAt(position_, position_ + front_, worldup_);
 }
 void Camera::updateCameraVectors() {
-    // std::cout << "normal Camera" << '\n';
     Vec3 front;
     front[0] = std::cos(radians(yaw_)) * std::cos(radians(pitch_));   // 0
     front[1] = std::sin(radians(pitch_));     // 0
@@ -120,10 +120,10 @@ void FPSCamera::processMouseMovement(double xoffset, double yoffset, bool constr
         pitch_ += yoffset;
 
         if(constrainPitch) {
-            if(pitch_ > 89.0f) {
-                pitch_ = 89.0f;
-            } else if(pitch_ < -89.0f) {
-                pitch_ = -89.0f;
+            if(pitch_ > 89.0) {
+                pitch_ = 89.0;
+            } else if(pitch_ < -89.0) {
+                pitch_ = -89.0;
             }
         }
         updateCameraVectors();
@@ -142,7 +142,6 @@ void FPSCamera::ProcessMouseScroll(double yoffset) {
 OrbitCamera::OrbitCamera(Vec3 position, Vec3 up, Vec3 target, double yaw, double pitch)
     :Camera(position, up, yaw, pitch), target_(target) { 
         type_ = SURROUND;
-        // front_ = Vec3{0, 0, 1};
         updateCameraVectors();
         // std::cout << ToString() << '\n';
     }

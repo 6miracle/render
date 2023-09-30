@@ -16,9 +16,12 @@ double lastX = width / 2.f;
 double lastY = height / 2.f;
 double curX = 0;
 double curY = 0;
-// bool first_mouse = true;
 
+// 时间相关
 double deltaTime = 0.0;
+double avgDuration = 0.0;
+int framecount = 0;
+
 std::chrono::time_point<std::chrono::steady_clock> lastFrame;
 void framebuffersizeCallback(GLFWwindow* window, int width, int height);
 void mouseCallback(GLFWwindow* window, double xpos, double ypos);
@@ -31,6 +34,14 @@ void updateTime() {
     std::chrono::time_point<std::chrono::steady_clock> currentFrame = std::chrono::steady_clock::now();
     deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentFrame - lastFrame).count() / 1000.0;
     lastFrame = currentFrame;
+
+    // // 计算fps
+    ++framecount;
+    if(framecount == 1) {
+        avgDuration = deltaTime;
+    } else {
+        avgDuration = (avgDuration * (framecount - 1) + deltaTime) / framecount;
+    }
 }
 
 Window::Window(int width, int height, const char* title):  width_(width), height_(height), title_(title){}
@@ -57,8 +68,7 @@ void Window::loadRender(Render* render) {
 }
 void Window::draw() {
     bool flag = true;
-    // render_->render();
-    // render_->write();
+
     while(!glfwWindowShouldClose(window_)) {
         updateTime();
         processInput();
@@ -70,21 +80,9 @@ void Window::draw() {
         glfwSwapBuffers(window_);
         glfwPollEvents();
     }
-   
+    
+    std::cout << "Total Frame: " << framecount << "\nfps:  " << (int)(1.0 / avgDuration) << '\n';
 }
-// void Window::update(TGAImage& image) {
-//     glBegin(GL_POINTS);
-//     for(int i = 0; i < image.width(); i ++) {
-//         for(int j = 0; j < image.height(); ++j) {
-//             TGAColor color = image.get(i, j);
-//             glColor3f(1.0f * color[2] / 255.0f, 1.0 * color[1] / 255.0f, 1.0 * color[0] / 255.0f);
-//             glVertex3f( 1.0 * i / width_ * 2.0 - 1. , 1.0 * j / height_ * 2.0 - 1., 0.0);
-//             // std::cout << color[0] << " " << color[1] << " " << color[2] << '\n';
-//         }
-//     }
-//     glEnd();
-// }
-
 Window::~Window() {
     // delete render_;
     glfwTerminate();
@@ -140,8 +138,6 @@ void mouseButtonCallback (GLFWwindow *window, int button, int action, int mode) 
             if(button == GLFW_MOUSE_BUTTON_LEFT) {
                 move_mode = true;
                 glfwGetCursorPos(window, &lastX, &lastY);
-                // lastX = curX;
-                // lastY = curY;
             }
             break;
         case GLFW_RELEASE:
@@ -151,4 +147,5 @@ void mouseButtonCallback (GLFWwindow *window, int button, int action, int mode) 
             break;
     }
 }
+
 }

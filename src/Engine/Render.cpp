@@ -9,6 +9,8 @@
 #include "GLFW/glfw3.h"
 #include <gl/GL.h>
 #include <sstream>
+#include <stdlib.h>
+#include <string>
 #include "nlohmann/json.hpp"
 
 namespace render {
@@ -25,7 +27,7 @@ void IShader::setUniform(const std::string& name, const Mat4& mat) {
 }
 
 // Render
-Render::Render(): image_(width, height, 3) { zbuffer_.resize(width * height, 0); }
+Render::Render(): image_(width, height, 3) { zbuffer_.resize((width + 100) * (height + 100), 0); }
 
 void Render::loadShader(IShader* shader) {
     shader_.reset(shader);
@@ -34,6 +36,17 @@ void Render::loadShader(IShader* shader) {
 void Render::loadModel(const std::string& path) {
     model_.push_back(new Model(path));
 }
+
+// void boundbox(Vec4* screen_coords, std::vector<int>& vec) {
+//      int bottom = std::floor(std::min(std::min(screen_coords[0].y(), screen_coords[1].y()), screen_coords[2].y()));
+//     int up = std::ceil(std::max(std::max(screen_coords[0].y(), screen_coords[1].y()), screen_coords[2].y()));
+//     int left = std::floor(std::min(std::min(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
+//     int right = std::ceil(std::max(std::max(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
+//     vec.push_back(bottom);
+//     vec.push_back(up);
+//     vec.push_back(left);
+//     vec.push_back(right);
+// }
 
 void Render::triangle(Vec4 clip_coords[3]) {
     Vec4 screen_coords[3];
@@ -46,29 +59,34 @@ void Render::triangle(Vec4 clip_coords[3]) {
     int left = std::floor(std::min(std::min(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
     int right = std::ceil(std::max(std::max(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
     glBegin(GL_POINTS);
-    for(int i = left; i <= right; ++i) {
-        for(int j = bottom; j <= up; ++j) {
+    for(int i = std::max(0, left); i <= std::min( width, right); ++i) {
+        for(int j = std::max(0, bottom); j <= std::min(height, up); ++j) {
             Vec3 vec = barycentric(screen_coords, {i, j, 0});
-            if(vec.x() < 0 || vec.y() < 0 || vec.z() <= 0) {
+            if(vec.x() < 0 || vec.y() < 0 || vec.z() < 0) {
                 continue;
             }
+            // if(clip_coords[0].z())
+            // if(clip_coords[0].z() == 0 || clip_coords[1].z() == 0 || clip_coords[2].z() == 0) {
+            //     printf("error\n");
+            //     exit(0);
+            // }
             vec[0] /= clip_coords[0].z();
             vec[1] /= clip_coords[1].z();
             vec[2] /= clip_coords[2].z();
-            // double z = 0, w = 0;
             // 透视矫正 https://zhuanlan.zhihu.com/p/144331875
             double z = 1.0 / (vec[0] + vec[1] + vec[2]);
-            // for(int t = 0; t < 3; ++t)  { 
-            //     z += screen_coords[t].z() * vec[t];
-            //     w += screen_coords[t][3] * vec[t];
-            // }
             double frag_depth = z;
+            //   if(i + j * width >= zbuffer_.size() || i + j * width < 0) {
+            //     LOG_ERROR("%d -- %d", i ,j);
+            //       std::stringstream ss; 
+            //     ss << screen_coords[0] << '\n' << screen_coords[1] << '\n' << screen_coords[2];
+            //     LOG_ERROR("%s", ss.str().c_str());
+            // }
             if(zbuffer_[i + j * width] == 0 || frag_depth < zbuffer_[i + j * width]) {
-                // std::cout << frag_depth << '\n';
                 zbuffer_[i + j * width] = frag_depth;
-                // zbuffer_.set(i,j, TGAColor{(uint8_t)(frag_depth), (uint8_t)frag_depth, (uint8_t)(frag_depth), 255});
                 TGAColor color;
                 bool flag = shader_->fragment(vec * z, color);
+                // LOG_ERROR("3");
                 if(!flag) {
                     image_.set(i, j, color);
                     // TODO
@@ -79,6 +97,7 @@ void Render::triangle(Vec4 clip_coords[3]) {
         }
     }
     glEnd();
+    // printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`\n");
 }
 void Render::render() {;
     // view矩阵
@@ -140,14 +159,13 @@ Vec3 barycentric(Vec4* vecs, Vec3 p) {
     double ya = vecs[0].y();
     double yb = vecs[1].y();
     double yc = vecs[2].y();
-
+    // ASSERT(((ya - yb) * xc + (xb - xa) * yc + xa * yb - xb * ya) != 0, "error");
     double gamma = ((ya - yb) * p.x() + (xb - xa) * p.y() + xa * yb - xb * ya) / ((ya - yb) * xc + (xb - xa) * yc + xa * yb - xb * ya);
     if(std::abs(gamma) < 1e-5) { return Vec3{-1, 1, 1}; } 
+    // ASSERT( ((ya - yc) * xb + (xc - xa) * yb + xa * yc - xc * ya) != 0, "error");
     double beta = ((ya - yc) * p.x() + (xc - xa) * p.y() + xa * yc - xc * ya) / ((ya - yc) * xb + (xc - xa) * yb + xa * yc - xc * ya);
     double alpha = 1 - beta - gamma;
     return Vec3{alpha, beta, gamma};
-
-
 }
 
 }
