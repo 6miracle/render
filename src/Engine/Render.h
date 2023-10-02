@@ -5,20 +5,8 @@
 #include "pch.h"
 #include <unordered_map>
 #include <memory>
+#include "Shader/shader.hpp"
 namespace render {
-
-class IShader {
-public:
-    virtual ~IShader() = default;
-    virtual Vec4 vertex(int face, int nthvert) = 0;
-    virtual bool fragment(Vec3 vec, TGAColor& color) = 0;
-    void setUniform(const std::string& name, const Mat4& mat);
-    void setModel(Model* model) { model_ = model;}
-protected:
-    std::unordered_map<std::string, Mat4> map_;
-    Model* model_;
-
-};
 
 class Render {
 public:

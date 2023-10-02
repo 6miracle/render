@@ -20,6 +20,8 @@ Mat4 pespectiveMatrix(double eye_fov, double aspect_ratio, double zNear, double 
 Mat4 viewPortMatrix(double widthm, double height);
 // 求出重心坐标
 Vec3 barycentric(Vec4* vecs, Vec3 p);
+// 齐次空间裁剪
+void clip(Vec4* clip_coords, std::list<Vec4> result);
 
 // IShader
 void IShader::setUniform(const std::string& name, const Mat4& mat) {
@@ -36,17 +38,6 @@ void Render::loadShader(IShader* shader) {
 void Render::loadModel(const std::string& path) {
     model_.push_back(new Model(path));
 }
-
-// void boundbox(Vec4* screen_coords, std::vector<int>& vec) {
-//      int bottom = std::floor(std::min(std::min(screen_coords[0].y(), screen_coords[1].y()), screen_coords[2].y()));
-//     int up = std::ceil(std::max(std::max(screen_coords[0].y(), screen_coords[1].y()), screen_coords[2].y()));
-//     int left = std::floor(std::min(std::min(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
-//     int right = std::ceil(std::max(std::max(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
-//     vec.push_back(bottom);
-//     vec.push_back(up);
-//     vec.push_back(left);
-//     vec.push_back(right);
-// }
 
 void Render::triangle(Vec4 clip_coords[3]) {
     Vec4 screen_coords[3];
@@ -120,12 +111,32 @@ void Render::render() {;
                 // screen_coords[j] /= screen_coords[j][3];
                 // screen_coords[j] =  viewPortMatrix(width, height) * screen_coords[j];
             } 
+            // 齐次空间裁剪(Homogeneous Space Clipping)
+            std::list<Vec4> coords;
+            clip(clip_coords, coords);
             triangle(clip_coords); 
         }
     }
 
 }
 
+int clip_with_plane(Vec3 plane, std::list<Vec4> result, int count) {
+    
+}
+void clip(Vec4* clip_coords, std::list<Vec4> result) {
+    Vec4 vertices[6] = { 
+        Vec4{0, 0, 1, 1}, // near
+        Vec4{0, 0, -1, 1}, // far
+        Vec4{1, 0, 0, 1},  // left
+        Vec4{-1, 0, 0, 1},  // right
+        Vec4{0, -1, 0, 1}, // up
+        Vec4{0, 1, 0, 1} // right
+    };
+
+    for(int i = 0; i < 6; ++i) {
+        // clip_with_plane(, std::list<Vec4> result, int count)
+    }
+}
 // 采用unity shader入门精要里的，因为观察空间为右手系，到投影矩阵变换到左手系
 Mat4 pespectiveMatrix(double eye_fov, double aspect_ratio, double zNear, double zFar) {
     double angle = eye_fov / 2 * std::numbers::pi / 180;

@@ -1,13 +1,29 @@
+#ifndef __RENDER_SHADER_H__
+#define __RENDER_SHADER_H__
+#include <unordered_map>
 #pragma once
 
 #include "Engine/Model/model.h"
 #include "pch.h"
 #include "maths/maths.hpp"
-#include "Engine/Render.h"
 #include "tgaimage.h"
 
 namespace render { 
+class IShader {
+public:
+    virtual ~IShader() = default;
+    virtual Vec4 vertex(int face, int nthvert) = 0;
+    virtual bool fragment(Vec3 vec, TGAColor& color) = 0;
+    void setUniform(const std::string& name, const Mat4& mat);
+    void setModel(Model* model) { model_ = model;}
+    void update(double ratio) {
+        
+    }
+protected:
+    std::unordered_map<std::string, Mat4> map_;
+    Model* model_;
 
+};
 // 获取zbuffer的空shader
 // class DepthShader: public IShader {
 // public:
@@ -179,3 +195,5 @@ private:
 
 };
 }
+
+#endif
