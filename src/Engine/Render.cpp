@@ -14,14 +14,16 @@
 #include "nlohmann/json.hpp"
 
 namespace render {
+
+enum PLANE {W_PLANE, X_LEFT, X_RIGHT, Y_UP, Y_DOWN, Z_NEAR, Z_FAR};
 static Camera* camera = Camera::GetCamera();
 Mat4 modelMatrix(double angle);
 Mat4 pespectiveMatrix(double eye_fov, double aspect_ratio, double zNear, double zFar);
 Mat4 viewPortMatrix(double widthm, double height);
 // 求出重心坐标
-Vec3 barycentric(Vec4* vecs, Vec3 p);
+Vec3 barycentric(Node* nodes, Vec3 p);
 // 齐次空间裁剪
-void clip(Vec4* clip_coords, std::list<Vec4> result);
+int clip(std::vector<Node>& result);
 
 // IShader
 void IShader::setUniform(const std::string& name, const Mat4& mat) {
@@ -39,20 +41,20 @@ void Render::loadModel(const std::string& path) {
     model_.push_back(new Model(path));
 }
 
-void Render::triangle(Vec4 clip_coords[3]) {
-    Vec4 screen_coords[3];
+void Render::triangle(Node* nodes) {
+    // Vec4 screen_coords[3];
     for (int j = 0; j < 3; j++) { 
-        screen_coords[j] = viewPortMatrix(width, height) * (clip_coords[j] /  clip_coords[j][3]);
+        nodes[j].screen_coords = viewPortMatrix(width, height) * (nodes[j].coords /  nodes[j].coords[3]);
     }
     // 寻找bounding box
-    int bottom = std::floor(std::min(std::min(screen_coords[0].y(), screen_coords[1].y()), screen_coords[2].y()));
-    int up = std::ceil(std::max(std::max(screen_coords[0].y(), screen_coords[1].y()), screen_coords[2].y()));
-    int left = std::floor(std::min(std::min(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
-    int right = std::ceil(std::max(std::max(screen_coords[0].x(), screen_coords[1].x()), screen_coords[2].x()));
+    int bottom = std::floor(std::min(std::min(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
+    int up = std::ceil(std::max(std::max(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
+    int left = std::floor(std::min(std::min(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
+    int right = std::ceil(std::max(std::max(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
     glBegin(GL_POINTS);
     for(int i = std::max(0, left); i <= std::min( width, right); ++i) {
         for(int j = std::max(0, bottom); j <= std::min(height, up); ++j) {
-            Vec3 vec = barycentric(screen_coords, {i, j, 0});
+            Vec3 vec = barycentric(nodes, {i, j, 0});
             if(vec.x() < 0 || vec.y() < 0 || vec.z() < 0) {
                 continue;
             }
@@ -61,9 +63,9 @@ void Render::triangle(Vec4 clip_coords[3]) {
             //     printf("error\n");
             //     exit(0);
             // }
-            vec[0] /= clip_coords[0].z();
-            vec[1] /= clip_coords[1].z();
-            vec[2] /= clip_coords[2].z();
+            vec[0] /= nodes[0].coords.z();
+            vec[1] /= nodes[1].coords.z();
+            vec[2] /= nodes[2].coords.z();
             // 透视矫正 https://zhuanlan.zhihu.com/p/144331875
             double z = 1.0 / (vec[0] + vec[1] + vec[2]);
             double frag_depth = z;
@@ -76,7 +78,7 @@ void Render::triangle(Vec4 clip_coords[3]) {
             if(zbuffer_[i + j * width] == 0 || frag_depth < zbuffer_[i + j * width]) {
                 zbuffer_[i + j * width] = frag_depth;
                 TGAColor color;
-                bool flag = shader_->fragment(vec * z, color);
+                bool flag = shader_->fragment(nodes, vec * z, color);
                 // LOG_ERROR("3");
                 if(!flag) {
                     image_.set(i, j, color);
@@ -97,45 +99,120 @@ void Render::render() {;
     Mat4 projection_matrix = pespectiveMatrix(camera->zoom_, 1.0 * width / height, 0.1, 100.0);
     shader_->setUniform("view", view_matrix);
     shader_->setUniform("projection", projection_matrix);
-
+    
     for(auto model : model_) {
         // 设置模型
         shader_->setModel(model);
         // 设置矩阵
         shader_->setUniform("model", model->model());
         for (int i = 0; i < model->nfaces(); i++) { 
-            render::Vec4 clip_coords[3]; 
+           Node nodes[3];
+            // nodes.resize(3);
             for (int j = 0; j < 3; j++) { 
-                clip_coords[j] = shader_->vertex(i, j);
+                shader_->vertex(nodes[j], i, j);
                 // 齐次坐标（主义和归一化normalized区分）
-                // screen_coords[j] /= screen_coords[j][3];
-                // screen_coords[j] =  viewPortMatrix(width, height) * screen_coords[j];
+                // nodes[j].screen_coords /= nodes[j].screen_coords[3];
+                // nodes[j].screen_coords =  viewPortMatrix(width, height) * nodes[j].screen_coords;
             } 
             // 齐次空间裁剪(Homogeneous Space Clipping)
-            std::list<Vec4> coords;
-            clip(clip_coords, coords);
-            triangle(clip_coords); 
+            std::vector<Node> list;
+            list.emplace_back(nodes[0]);
+            list.emplace_back(nodes[1]);
+            list.emplace_back(nodes[2]);
+            int num = clip(list);
+            for(int i = 0; i < num; ++i) {
+                nodes[0] = list[i];
+                nodes[1] = list[(i + 1) % num];
+                nodes[2] = list[(i + 2) % num];
+                triangle(nodes); 
+            }
         }
     }
 
 }
 
-int clip_with_plane(Vec3 plane, std::list<Vec4> result, int count) {
-    
-}
-void clip(Vec4* clip_coords, std::list<Vec4> result) {
-    Vec4 vertices[6] = { 
-        Vec4{0, 0, 1, 1}, // near
-        Vec4{0, 0, -1, 1}, // far
-        Vec4{1, 0, 0, 1},  // left
-        Vec4{-1, 0, 0, 1},  // right
-        Vec4{0, -1, 0, 1}, // up
-        Vec4{0, 1, 0, 1} // right
-    };
-
-    for(int i = 0; i < 6; ++i) {
-        // clip_with_plane(, std::list<Vec4> result, int count)
+bool insidePlane(PLANE plane, Vec4 vec) {
+    switch(plane) {
+        case W_PLANE:
+            // return true;
+            return vec.w() >= 0.0000001;
+        case X_LEFT:
+            return vec.x() <= vec.w();
+        case X_RIGHT:
+            return vec.x() >= -vec.w();
+        case Y_UP:
+            return vec.y() <= vec.w();
+        case Y_DOWN:
+            return vec.y() >= -vec.w();
+        case Z_NEAR:
+            return vec.z() <= vec.w();
+        case Z_FAR:
+            return vec.z() >= -vec.w();
+        default:
+            ASSERT(false, "plane error");
     }
+    return false;
+}
+
+double calRatio(Vec4 prev, Vec4 curv, PLANE plane) {
+    switch(plane) {
+        case W_PLANE:
+            return (prev.w() + 0.00001) / (prev.w() - curv.w());
+        case X_RIGHT:
+            return (prev.w() - prev.x()) / ((prev.w() - prev.x()) - (curv.w() - curv.x()));
+        case X_LEFT:
+            return (prev.w() + prev.x()) / ((prev.w() + prev.x()) - (curv.w() + curv.x()));
+        case Y_UP:
+            return (prev.w() - prev.y()) / ((prev.w() - prev.y()) - (curv.w() - curv.y()));
+        case Y_DOWN:
+            return (prev.w() + prev.y()) / ((prev.w() + prev.y()) - (curv.w() + curv.y()));
+        case Z_NEAR:
+            return (prev.w() - prev.z()) / ((prev.w() - prev.z()) - (curv.w() - curv.z()));
+        case Z_FAR:
+            return (prev.w() + prev.z()) / ((prev.w() + prev.z()) - (curv.w() + curv.z()));
+        default:
+            return 0;
+    }
+}
+int clip_with_plane(PLANE plane, std::vector<Node>& result, int count) {
+    std::vector<Node> tmp(std::move(result));
+    result.clear();
+    int num = 0;
+    for(int i = 0; i < count; ++i) {
+        Node& cur = tmp[i];
+        Node& pre = tmp[(i - 1 + count) % count];
+
+        bool curF = insidePlane(plane, cur.coords);
+        bool preF = insidePlane(plane, pre.coords);
+
+        if(curF != preF) {
+            double ratio = calRatio(pre.coords, cur.coords, plane);
+            Node node;
+            node.coords = pre.coords + (cur.coords - pre.coords) * ratio;
+            node.uv = pre.uv + (cur.uv - pre.uv) * ratio;
+            node.diffuse = pre.diffuse * (1 - ratio) + cur.diffuse * ratio;
+            node.normal = pre.normal + (cur.normal - pre.normal) * ratio;
+            node.specular = pre.specular + (cur.specular - cur.specular) * ratio;
+            node.normalTan = pre.normalTan * (1 - ratio) +  ratio * cur.normalTan;
+            result.emplace_back(node);
+            ++num;
+        } 
+        if(curF) {
+            result.emplace_back(cur);
+            ++num;
+        }
+     }
+     return num;
+}
+int clip(std::vector<Node>& result) {
+    int num = clip_with_plane(W_PLANE, result, 3);
+    num = clip_with_plane(Z_NEAR, result, num);
+    num = clip_with_plane(Z_FAR, result, num);
+    // num = clip_with_plane(X_LEFT, result, num);
+    // num = clip_with_plane(X_RIGHT, result, num);
+    num = clip_with_plane(Y_UP, result, num);
+    num = clip_with_plane(Y_DOWN, result, num);
+    return num;
 }
 // 采用unity shader入门精要里的，因为观察空间为右手系，到投影矩阵变换到左手系
 Mat4 pespectiveMatrix(double eye_fov, double aspect_ratio, double zNear, double zFar) {
@@ -163,13 +240,13 @@ Mat4 viewPortMatrix(double width, double height) {
 }
 
 // 求出重心坐标
-Vec3 barycentric(Vec4* vecs, Vec3 p) {
-    double xa = vecs[0].x();
-    double xb = vecs[1].x();
-    double xc = vecs[2].x();
-    double ya = vecs[0].y();
-    double yb = vecs[1].y();
-    double yc = vecs[2].y();
+Vec3 barycentric(Node* nodes, Vec3 p) {
+    double xa = nodes[0].screen_coords.x();
+    double xb = nodes[1].screen_coords.x();
+    double xc = nodes[2].screen_coords.x();
+    double ya = nodes[0].screen_coords.y();
+    double yb = nodes[1].screen_coords.y();
+    double yc = nodes[2].screen_coords.y();
     // ASSERT(((ya - yb) * xc + (xb - xa) * yc + xa * yb - xb * ya) != 0, "error");
     double gamma = ((ya - yb) * p.x() + (xb - xa) * p.y() + xa * yb - xb * ya) / ((ya - yb) * xc + (xb - xa) * yc + xa * yb - xb * ya);
     if(std::abs(gamma) < 1e-5) { return Vec3{-1, 1, 1}; } 

@@ -2,6 +2,7 @@
 #define __RENDER_TGAIMAGE_H__
 #include "pch.h"
 #include <fstream>
+#include <initializer_list>
 #include <stdint.h>
 namespace render  {
 
@@ -27,8 +28,20 @@ struct TGAHeader {
 struct TGAColor {
     uint8_t bgra[4]{0};
     uint8_t bytespp = 4;
+    TGAColor() = default;
+    TGAColor(const std::initializer_list<uint8_t>& list);
     uint8_t& operator[](const int i) { return bgra[i]; }
     TGAColor& operator*(double val);
+    TGAColor operator+(const TGAColor& color) { 
+        TGAColor result;
+        for(int i = 0; i < 4; ++i) {
+            result.bgra[0] = std::min(bgra[0] +color.bgra[0], 255);
+            result.bgra[1] = std::min(bgra[1] +color.bgra[1], 255);
+            result.bgra[2] = std::min(bgra[2] +color.bgra[2], 255);
+            result.bgra[3] = std::min(bgra[3] +color.bgra[3], 255);
+        }
+        return result;
+     }
 };
 
 class TGAImage {
@@ -52,6 +65,8 @@ public:
     void clear() { 
         std::fill(data_.begin(), data_.end(), 0);
     }
+
+    bool empty() { return data_.empty(); }
 private:
     bool load_rle_data(std::ifstream& in);
     bool write_rle_data(std::ofstream& out) const;

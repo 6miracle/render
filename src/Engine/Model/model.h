@@ -12,10 +12,30 @@ namespace render {
 // typedef std::array<float, 3> Vec3;
 // typedef std::array<float, 2> Vec2;
 // typedef std::array<std::array<int, 3>, 3> Mat3x3;
+
+// 面
+struct Node {
+    Vec4 coords; // 世界坐标 -- 裁剪坐标
+    Vec4 screen_coords;  // 屏幕坐标
+    Vec2 uv;        // 纹理坐标
+    Vec3 normal;    // 法向量
+    Vec3 normalTan; // 法线
+    TGAColor diffuse; // 环境光
+    double specular; // 高光
+};
 class Model {
 public:
     Model(const std::string& path);
     // bool Load(const std::string& path);
+
+    void Node(struct Node& tmp,int face, int i) {
+        tmp.coords = local2homo(node(face, i));
+        if(!normals.empty()) { tmp.normal = normal(face, i); }
+        if(!textures.empty())  { tmp.uv = uv(face, i); }
+        if(!normalTanMap.empty()) { tmp.normalTan = normalTan(tmp.uv); }
+        if(!diffuseMap.empty()) {tmp.diffuse = diffuse(tmp.uv); }
+        if(!specularMap.empty()) { tmp.specular = specular(tmp.uv); }
+    }
     Vec3 node(int i) { return nodes[i]; }
     Vec3 node(int face, int i) { return nodes[face_node[face * 3 + i]]; }
     Vec3 normal(int face, int i) { return normals[face_nor[face * 3 + i]]; }

@@ -18,7 +18,7 @@ public:
     void loadModel(const std::string& path);
     void loadShader(IShader* shader);
     // 光栅化
-    void triangle(Vec4 vecs[3]);            
+    void triangle(Node* nodes);            
     void render();
     // Model* getModel()  { return model_;}
     void clear() { 

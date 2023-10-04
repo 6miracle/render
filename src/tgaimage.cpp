@@ -259,7 +259,13 @@ int TGAImage::height() const {
     return h_;
 }
 
-
+TGAColor::TGAColor(const std::initializer_list<uint8_t>& list) {
+    int num = 0;
+    for(uint8_t v : list) {
+        bgra[num++] = v;
+        if(num == 4) { break; }
+    }
+}
 TGAColor& TGAColor::operator*(double val) {
     bgra[0] = (uint8_t)(bgra[0] * val);
     bgra[1] = (uint8_t)(bgra[1] * val);

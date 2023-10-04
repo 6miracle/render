@@ -49,7 +49,7 @@ public:
     double x() const;
     double y() const;
     double z() const;
-
+    double w() const;
 private:
     double array_[N] = {0};
 };
@@ -217,7 +217,11 @@ double Vec<N>::z() const {
     ASSERT(N >= 3 , "N >= 3");
     return array_[2];
 }
-
+template <size_t N>
+double Vec<N>::w() const {
+    ASSERT(N >= 4 , "N >= 4");
+    return array_[3];
+}
 
 using Vec2 = Vec<2>;
 using Vec3 = Vec<3>;
