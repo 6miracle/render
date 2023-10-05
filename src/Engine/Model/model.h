@@ -22,9 +22,25 @@ struct Node {
 };
 class Model {
 public:
-    Model(const std::string& path);
-    // bool Load(const std::string& path);
+    virtual void Node(struct Node& tmp,int face, int i) = 0;
+    virtual Mat4 model() = 0;
+    virtual  size_t nfaces() const = 0;
+};  
+class TriModel: public Model {
+public:
+    TriModel(struct Node* node);
+    void Node(struct Node& tmp,int face, int i);
+    Mat4 model();
+    size_t nfaces() const {return 3;}
 
+private:
+    std::array<struct Node, 3> nodes_;
+    Mat4 modelMat_;
+};
+class ObjModel:public Model{
+public:
+    ObjModel(const std::string& path);
+    void load(const std::string& path);
     void Node(struct Node& tmp,int face, int i) {
         tmp.coords = local2homo(node(face, i));
         if(!normals.empty()) { tmp.normal = normal(face, i); }

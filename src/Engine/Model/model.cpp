@@ -1,4 +1,5 @@
 #include "model.h"
+#include "Engine/Model/model.h"
 #include "tgaimage.h"
 #include <algorithm>
 #include <fstream>
@@ -16,9 +17,26 @@ Mat4 rotate(double angle);
 // 缩放
 Mat4 scale(Vec3 vec);
 
+
+TriModel::TriModel(struct Node* node) {
+    for(int i = 0; i < 3; ++i) {
+        nodes_[i] = node[i];
+    }
+    modelMat_ << 1, 0, 0, 0,
+                0, 1, 0, 0,
+                0 ,0 ,1, 0,
+                0, 0, 0, 1;
+}
+void TriModel::Node(struct Node& tmp,int face, int i) {
+    ASSERT(i < 3, "i is less than 3");
+    tmp = nodes_[i];
+}
+Mat4 TriModel::model() {
+    return modelMat_;
+}
 // model
 // 读取json
-Model::Model(const std::string& path) {
+ObjModel::ObjModel(const std::string& path) {
     std::ifstream ifs(path);
     nlohmann::json data = nlohmann::json::parse(ifs);
     modelMatrix_ = translate(Vec3{data["translate"][0].template get<double>(), 
@@ -33,8 +51,24 @@ Model::Model(const std::string& path) {
     }
     loadObj(data["mesh"]);
 }
+// 加载配置文件
+void ObjModel::load(const std::string& path) {
+     std::ifstream ifs(path);
+    nlohmann::json data = nlohmann::json::parse(ifs);
+    modelMatrix_ = translate(Vec3{data["translate"][0].template get<double>(), 
+    data["translate"][1].template get<double>(), data["translate"][2].template get<double>()});
+    modelMatrix_ = modelMatrix_ * rotate(data["rotate"].template get<double>());
+    if(data["scale"].is_number()) {
+        double num = data["scale"].get<double>();
+        modelMatrix_ = modelMatrix_ * scale(Vec3{num, num, num});
+    } else {
+        modelMatrix_ = modelMatrix_ * scale(Vec3{data["scale"][0].get<double>(), 
+            data["scale"][1].get<double>(),data["scale"][2].get<double>(),});
+    }
+    loadObj(data["mesh"]);
+}
 // 加载模型
-void Model::loadObj(const std::string& path) {
+void ObjModel::loadObj(const std::string& path) {
     std::ifstream is(path);
     ASSERT(is.is_open(), "文件打开失败");
     std::cout << path << '\n';
@@ -81,7 +115,7 @@ void Model::loadObj(const std::string& path) {
     loadTexture(path, "_nm_tangent.tga", normalTanMap);
 }
 
-std::string Model::ToString() const {
+std::string ObjModel::ToString() const {
     std::stringstream ss;
     for(auto i : nodes) {
         ss << "v " << i << "\n";
@@ -98,7 +132,7 @@ std::string Model::ToString() const {
     return ss.str();
 }
 
-void Model::loadTexture(const std::string& filename, const std::string suffix, TGAImage& image) {
+void ObjModel::loadTexture(const std::string& filename, const std::string suffix, TGAImage& image) {
     size_t dot = filename.find_last_of(".");
     if(dot == std::string::npos) return ;
     std::string texfile = filename.substr(0, dot) + suffix;
@@ -106,7 +140,7 @@ void Model::loadTexture(const std::string& filename, const std::string suffix, T
     image.flip_vertically();
 }
 
-Vec3 Model::normal(Vec2 uv) {
+Vec3 ObjModel::normal(Vec2 uv) {
     TGAColor color = normalMap.get(uv.x() * normalMap.width(), uv.y() * normalMap.height());
     Vec3 vec;
     for(int i = 0; i < 3; ++i) {
@@ -114,11 +148,11 @@ Vec3 Model::normal(Vec2 uv) {
     }
     return vec;
 }
-double Model::specular(Vec2 uv) {
+double ObjModel::specular(Vec2 uv) {
     return specularMap.get(uv.x() * specularMap.width(), uv.y() * specularMap.height())[0] / 1.0;
 }
 
-Vec3 Model::normalTan(Vec2 uv) {
+Vec3 ObjModel::normalTan(Vec2 uv) {
     TGAColor color = normalTanMap.get(uv.x() * normalTanMap.width(), uv.y() * normalTanMap.height());
     Vec3 vec;
     for(int i = 0; i < 3; ++i) {

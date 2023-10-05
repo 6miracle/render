@@ -40,7 +40,11 @@ void Render::loadShader(IShader* shader) {
 }
 
 void Render::loadModel(const std::string& path) {
-    model_.push_back(new Model(path));
+    model_.push_back(new ObjModel(path));
+}
+
+void Render::loadModel(Node* node) {
+    model_.push_back(new TriModel(node));
 }
 
 void Render::triangle(Node* nodes) {

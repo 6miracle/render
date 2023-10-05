@@ -2,6 +2,8 @@
 #define __RENDER_SHADER_H__
 #include "Engine/Scene/Scene.h"
 #include "util.h"
+#include <memory>
+#include <sstream>
 #include <unordered_map>
 #pragma once
 
@@ -38,6 +40,19 @@ protected:
 // private:
 //   Model* model_;
 // };
+
+class TriangleShader:public IShader {
+  void vertex(Node& node, int face, int nthvert) {
+      model_->Node(node, face, nthvert);
+      node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
+   }
+  bool fragment(Node* node, Vec3 vec, render::TGAColor& color) {
+    // LOG_ERROR("%d %d %d", ss.str().c_str());
+    color = TGAColor{static_cast<unsigned char>(vec[0] * 255), static_cast<unsigned char>(vec[1] * 255), static_cast<unsigned char>(vec[2] * 255)};
+    //  LOG_ERROR("%d %d %d", color[0], color[1], color[2]);
+    return false;
+  }
+};
 class RayShader: public render::IShader {
 public:
    void vertex(Node& node, int face, int nthvert) {
@@ -72,6 +87,7 @@ public:
     }
     bool fragment(Node* node, Vec3 vec, render::TGAColor& color) {
       Vec2 uv = node[0].uv * vec[0] + node[1].uv * vec[1] + node[2].uv * vec[2];
+      ObjModel* model = (ObjModel*)(model_);
     //   Vec3 n = homo2local(uniform_MIT * localvhomo(model_->normal(uv))).normalized();
     //   Vec3 l = homo2local(uniform_M * localvhomo(light_dir)).normalized();
 
@@ -84,7 +100,7 @@ public:
     //   for(int i = 0; i < 3; ++i) color[i] = std::min(255.,(5 + diffuseColor[i] * (3 * diff + 6 * specular)));
     //   color[3] = 255;
       // for(int i = 0; i < 4; ++i) color[i] = 255;
-      color = model_->diffuse(uv);
+      color = model->diffuse(uv);
       return false;
     } 
 private:
@@ -160,54 +176,54 @@ private:
 // };
 
 
-class ShadowShader: public IShader {
-public:
-  ShadowShader(Model* model, Mat4 mvp_light, render::TGAImage& buffer)
-  : model_(model), mvpLight_(mvp_light), buffer_(buffer) {
-  }
-   virtual Vec4 vertex(int face, int nthvert) {
-      Vec4 node = render::local2homo(model_->node(face, nthvert));
-      triangles[nthvert] = node;
-      uvs[nthvert] = model_->uv(face , nthvert);
-      uniform_M = map_["view"] * map_["model"];
-      Mat4 mvp = map_["projection"] * uniform_M;
-      uniform_MIT = mvp.invert().transpose();
-      return mvp * node;
-  }
-  virtual bool fragment(Vec3 vec, render::TGAColor& color)  {
-      Vec2 uv = uvs[0] * vec[0] + uvs[1] * vec[1] + uvs[2] * vec[2];
-      Vec3 n = render::homo2local(uniform_MIT * render::local2homo(model_->normal(uv))).normalized();
-      Vec3 l = render::homo2local(uniform_M * render::local2homo(light_dir)).normalized();
-      // 反射光线
-      Vec3 r = (2 * n * (n* l) - l).normalized();
-      double diff = std::max(0.0, n * l);
-      double specular = pow(std::max(r.z(), 0.), model_->specular(uv));
+// class ShadowShader: public IShader {
+// public:
+//   ShadowShader(Model* model, Mat4 mvp_light, render::TGAImage& buffer)
+//   : model_(model), mvpLight_(mvp_light), buffer_(buffer) {
+//   }
+//    virtual Vec4 vertex(int face, int nthvert) {
+//       Vec4 node = render::local2homo(model_->node(face, nthvert));
+//       triangles[nthvert] = node;
+//       uvs[nthvert] = model_->uv(face , nthvert);
+//       uniform_M = map_["view"] * map_["model"];
+//       Mat4 mvp = map_["projection"] * uniform_M;
+//       uniform_MIT = mvp.invert().transpose();
+//       return mvp * node;
+//   }
+//   virtual bool fragment(Vec3 vec, render::TGAColor& color)  {
+//       Vec2 uv = uvs[0] * vec[0] + uvs[1] * vec[1] + uvs[2] * vec[2];
+//       Vec3 n = render::homo2local(uniform_MIT * render::local2homo(model_->normal(uv))).normalized();
+//       Vec3 l = render::homo2local(uniform_M * render::local2homo(light_dir)).normalized();
+//       // 反射光线
+//       Vec3 r = (2 * n * (n* l) - l).normalized();
+//       double diff = std::max(0.0, n * l);
+//       double specular = pow(std::max(r.z(), 0.), model_->specular(uv));
 
-      Vec4 light_Vec = mvpLight_ * triangles[0] * vec[0] + mvpLight_ * triangles[1] * vec[1] + mvpLight_ * triangles[2] * vec[2];
-      light_Vec =  light_Vec / light_Vec[3];
-      double depth = light_Vec.z();
-      render::TGAColor cl = model_->diffuse(uv);
-      color = cl;
-      for(int i = 0; i < 3; ++i) {
-        if(depth  > buffer_.get(vec.x(), vec.y()).bgra[0]) {
-          color[i] = 0;
-        } else {
-          color[i] = std::min(255.0, 5.0 + cl[i] * (diff + 6 * specular));
-        }
-      }
-      return false;
-  }
-private:
-  Model* model_;
-   Vec4 triangles[3];
-  Vec3 intensity_;
-  Vec2 uvs[3];
-  Mat4 uniform_M;
-  Mat4 uniform_MIT;
-  render::TGAImage buffer_;
-  Mat4 mvpLight_;
+//       Vec4 light_Vec = mvpLight_ * triangles[0] * vec[0] + mvpLight_ * triangles[1] * vec[1] + mvpLight_ * triangles[2] * vec[2];
+//       light_Vec =  light_Vec / light_Vec[3];
+//       double depth = light_Vec.z();
+//       render::TGAColor cl = model_->diffuse(uv);
+//       color = cl;
+//       for(int i = 0; i < 3; ++i) {
+//         if(depth  > buffer_.get(vec.x(), vec.y()).bgra[0]) {
+//           color[i] = 0;
+//         } else {
+//           color[i] = std::min(255.0, 5.0 + cl[i] * (diff + 6 * specular));
+//         }
+//       }
+//       return false;
+//   }
+// private:
+//   Model* model_;
+//    Vec4 triangles[3];
+//   Vec3 intensity_;
+//   Vec2 uvs[3];
+//   Mat4 uniform_M;
+//   Mat4 uniform_MIT;
+//   render::TGAImage buffer_;
+//   Mat4 mvpLight_;
 
-};
+// };
 }
 
 #endif

@@ -16,6 +16,7 @@ public:
         // zbuffer_.write_tga_file("depth.tga");
     }
     void loadModel(const std::string& path);
+    void loadModel(Node* node);
     void loadShader(IShader* shader);
     virtual void render();
     // 光栅化
