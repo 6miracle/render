@@ -9,9 +9,6 @@
 #include <fstream>
 #include <ostream>
 namespace render {
-// typedef std::array<float, 3> Vec3;
-// typedef std::array<float, 2> Vec2;
-// typedef std::array<std::array<int, 3>, 3> Mat3x3;
 
 // 面
 struct Node {

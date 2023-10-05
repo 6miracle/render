@@ -1,9 +1,11 @@
 #include "Render.h"
 #include "Engine/Model/model.h"
 #include "Engine/Render.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/camera/camera.h"
 #include "maths/Matrix.hpp"
 #include "maths/maths.hpp"
+#include "tgaimage.h"
 #include "util.h"
 #include <cmath>
 #include "GLFW/glfw3.h"
@@ -58,23 +60,12 @@ void Render::triangle(Node* nodes) {
             if(vec.x() < 0 || vec.y() < 0 || vec.z() < 0) {
                 continue;
             }
-            // if(clip_coords[0].z())
-            // if(clip_coords[0].z() == 0 || clip_coords[1].z() == 0 || clip_coords[2].z() == 0) {
-            //     printf("error\n");
-            //     exit(0);
-            // }
             vec[0] /= nodes[0].coords.z();
             vec[1] /= nodes[1].coords.z();
             vec[2] /= nodes[2].coords.z();
             // 透视矫正 https://zhuanlan.zhihu.com/p/144331875
             double z = 1.0 / (vec[0] + vec[1] + vec[2]);
             double frag_depth = z;
-            //   if(i + j * width >= zbuffer_.size() || i + j * width < 0) {
-            //     LOG_ERROR("%d -- %d", i ,j);
-            //       std::stringstream ss; 
-            //     ss << screen_coords[0] << '\n' << screen_coords[1] << '\n' << screen_coords[2];
-            //     LOG_ERROR("%s", ss.str().c_str());
-            // }
             if(zbuffer_[i + j * width] == 0 || frag_depth < zbuffer_[i + j * width]) {
                 zbuffer_[i + j * width] = frag_depth;
                 TGAColor color;
@@ -110,22 +101,19 @@ void Render::render() {;
             // nodes.resize(3);
             for (int j = 0; j < 3; j++) { 
                 shader_->vertex(nodes[j], i, j);
-                // 齐次坐标（主义和归一化normalized区分）
-                // nodes[j].screen_coords /= nodes[j].screen_coords[3];
-                // nodes[j].screen_coords =  viewPortMatrix(width, height) * nodes[j].screen_coords;
             } 
             // 齐次空间裁剪(Homogeneous Space Clipping)
-            std::vector<Node> list;
-            list.emplace_back(nodes[0]);
-            list.emplace_back(nodes[1]);
-            list.emplace_back(nodes[2]);
-            int num = clip(list);
-            for(int i = 0; i < num; ++i) {
-                nodes[0] = list[i];
-                nodes[1] = list[(i + 1) % num];
-                nodes[2] = list[(i + 2) % num];
+            // std::vector<Node> list;
+            // list.emplace_back(nodes[0]);
+            // list.emplace_back(nodes[1]);
+            // list.emplace_back(nodes[2]);
+            // int num = clip(list);
+            // for(int i = 0; i < num; ++i) {
+            //     nodes[0] = list[i];
+            //     nodes[1] = list[(i + 1) % num];
+            //     nodes[2] = list[(i + 2) % num];
                 triangle(nodes); 
-            }
+            // }
         }
     }
 
@@ -210,8 +198,8 @@ int clip(std::vector<Node>& result) {
     num = clip_with_plane(Z_FAR, result, num);
     // num = clip_with_plane(X_LEFT, result, num);
     // num = clip_with_plane(X_RIGHT, result, num);
-    num = clip_with_plane(Y_UP, result, num);
-    num = clip_with_plane(Y_DOWN, result, num);
+    // num = clip_with_plane(Y_UP, result, num);
+    // num = clip_with_plane(Y_DOWN, result, num);
     return num;
 }
 // 采用unity shader入门精要里的，因为观察空间为右手系，到投影矩阵变换到左手系
@@ -256,4 +244,23 @@ Vec3 barycentric(Node* nodes, Vec3 p) {
     return Vec3{alpha, beta, gamma};
 }
 
+
+
+void TestRender::render() {
+    glBegin(GL_POINTS);
+    // printf("--------------------\n");
+    Scene scene;
+    Vec3 center{0, 0, 0};
+    for(int i = 0; i < width; ++i) {
+        for(int j = 0; j < height; ++j) {
+            Ray ray(center, Vec3{1.0 * i, 1.0 * j, -255.0});
+            TGAColor color = scene.color(ray);
+            // if(color[0] != 255) {
+            glColor3f(1.0f * color[0] / 255.0f, 1.0 * color[1] / 255.0f, 1.0 * color[2] / 255.0f);
+            glVertex3f(1.0f * i / width * 2 - 1, 1.0f * j / height* 2 - 1, 0.0f);
+            // }
+        }
+    }
+    glEnd();
+}
 }

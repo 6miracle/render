@@ -1,6 +1,7 @@
 #ifndef __RENDER_SHADER_H__
 #define __RENDER_SHADER_H__
 #include "Engine/Scene/Scene.h"
+#include "util.h"
 #include <unordered_map>
 #pragma once
 
@@ -44,7 +45,8 @@ public:
       node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
    }
   bool fragment(Node* node, Vec3 vec, render::TGAColor& color) {
-      color = scene_->color();
+      //   double y = (node[0].screen_coords.y() * vec.x() +  node[1].screen_coords.y() * vec.y() +  node[2].screen_coords.y() * vec.z()) / height;
+      // color = scene_->color(y);
       return false;
   }
 

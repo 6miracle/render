@@ -20,7 +20,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 include_directories(vendor)
 include_directories(vendor/include)
-link_directories(vendor/lib)
+link_libraries(vendor/lib)
 
 target_precompile_headers(${PROJECT_NAME} PUBLIC src/pch.h)
 target_include_directories(${PROJECT_NAME} PUBLIC  src )

@@ -20,7 +20,7 @@ private:
 class Scene {
 public:
 
-    TGAColor color();
+    TGAColor color(Ray& ray);
 private:
 
 

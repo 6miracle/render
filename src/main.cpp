@@ -28,6 +28,7 @@ void jsonTest() {
 int main() {
     render::Render render;
     render.loadModel(load());
+    // render.loadModel(load());
     render.loadShader(new render::GouraudShader());
 
     render::Window window;
@@ -39,5 +40,6 @@ int main() {
     // render::Model model(load());
     // std::cout << model.model() << '\n';
     // render.loadJson(load());
+
 
 }
