@@ -22,26 +22,57 @@ struct Node {
 };
 class Model {
 public:
+    enum class Type {
+        Base, Triangle, Circle, Ball, Object
+    };
     virtual void Node(struct Node& tmp,int face, int i) = 0;
     virtual Mat4 model() = 0;
-    virtual  size_t nfaces() const = 0;
+    virtual size_t nfaces() const = 0;
+    virtual Type type() const {  return Type::Base; }
 };  
 class TriModel: public Model {
 public:
     TriModel(struct Node* node);
-    void Node(struct Node& tmp,int face, int i);
-    Mat4 model();
-    size_t nfaces() const {return 3;}
-
+    void Node(struct Node& tmp,int face, int i) override;
+    Mat4 model() override;
+    size_t nfaces() const override{return 3;}
+    Type type() const override {  return Type::Triangle; }
 private:
     std::array<struct Node, 3> nodes_;
     Mat4 modelMat_;
+};
+
+class CircleModel: public Model {
+public:
+    CircleModel(struct Node& node, double radius);
+    void Node(struct Node& tmp,int face, int i) override;
+    Mat4 model() override;
+    size_t nfaces() const override { return radius_ * 100;}
+    Type type() const override {  return Type::Circle; }
+    double getRadius() { return radius_; }
+private:
+    struct Node center_;
+    double radius_;
+};
+
+class BallModel: public Model {
+public:
+    BallModel(struct Node& node, double radius);
+    void Node(struct Node& tmp,int face, int i) override;
+    Mat4 model() override;
+    size_t nfaces() const override { return total_;}
+    Type type() const override {  return Type::Ball; }
+    double getRadius() { return radius_; }
+private:
+    struct Node center_;
+    double radius_;
+    double total_;
 };
 class ObjModel:public Model{
 public:
     ObjModel(const std::string& path);
     void load(const std::string& path);
-    void Node(struct Node& tmp,int face, int i) {
+    void Node(struct Node& tmp,int face, int i) override{
         tmp.coords = local2homo(node(face, i));
         if(!normals.empty()) { tmp.normal = normal(face, i); }
         if(!textures.empty())  { tmp.uv = uv(face, i); }
@@ -63,12 +94,12 @@ public:
     double specular(Vec2 uv);
     std::string ToString() const;
 
-    size_t nfaces() const { return faces.size(); }
+    size_t nfaces() const override{ return faces.size(); }
     Mat3 face(size_t i) const { return faces[i]; }
 
     void loadTexture(const std::string& filename, const std::string suffix, TGAImage& image);
     void loadObj(const std::string& path);
-    Mat4 model() { return modelMatrix_; }
+    Mat4 model() override{ return modelMatrix_; }
     void test(std::ofstream& os) {
        for(size_t i = 0; i < face_tex.size(); i +=3) {
         os << face_tex[i] << " " << face_tex[i + 1] << " " << face_tex[i + 2] << "\n";
@@ -77,7 +108,7 @@ public:
         os << textures[i] << "\n";
        }
     }
-
+    Type type() const override {  return Type::Object; }
 private:    
     std::vector<Vec3> nodes;
     std::vector<Vec2> textures;

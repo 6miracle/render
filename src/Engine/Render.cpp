@@ -7,6 +7,7 @@
 #include "maths/maths.hpp"
 #include "tgaimage.h"
 #include "util.h"
+#include <array>
 #include <cmath>
 #include "GLFW/glfw3.h"
 #include <gl/GL.h>
@@ -26,6 +27,9 @@ Mat4 viewPortMatrix(double widthm, double height);
 Vec3 barycentric(Node* nodes, Vec3 p);
 // 齐次空间裁剪
 int clip(std::vector<Node>& result);
+// bounding box
+std::array<int, 4> boundBox(Node* nodes);
+bool inCycle(Vec3 vec, Vec3 center, double radius);
 
 // IShader
 void IShader::setUniform(const std::string& name, const Mat4& mat) {
@@ -47,19 +51,25 @@ void Render::loadModel(Node* node) {
     model_.push_back(new TriModel(node));
 }
 
+void Render::loadModel(Node& node, double radius) {
+    model_.push_back(new BallModel(node, radius));
+}
+
 void Render::triangle(Node* nodes) {
     // Vec4 screen_coords[3];
     for (int j = 0; j < 3; j++) { 
         nodes[j].screen_coords = viewPortMatrix(width, height) * (nodes[j].coords /  nodes[j].coords[3]);
     }
     // 寻找bounding box
-    int bottom = std::floor(std::min(std::min(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
-    int up = std::ceil(std::max(std::max(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
-    int left = std::floor(std::min(std::min(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
-    int right = std::ceil(std::max(std::max(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
+
+    // int bottom = std::floor(std::min(std::min(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
+    // int up = std::ceil(std::max(std::max(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
+    // int left = std::floor(std::min(std::min(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
+    // int right = std::ceil(std::max(std::max(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
+    std::array<int, 4> bbox = boundBox(nodes);
     glBegin(GL_POINTS);
-    for(int i = std::max(0, left); i <= std::min( width, right); ++i) {
-        for(int j = std::max(0, bottom); j <= std::min(height, up); ++j) {
+    for(int i = std::max(0, bbox[2]); i <= std::min( width, bbox[3]); ++i) {
+        for(int j = std::max(0, bbox[0]); j <= std::min(height, bbox[1]); ++j) {
             Vec3 vec = barycentric(nodes, {i, j, 0});
             if(vec.x() < 0 || vec.y() < 0 || vec.z() < 0) {
                 continue;
@@ -98,31 +108,84 @@ void Render::render() {;
     for(auto model : model_) {
         // 设置模型
         shader_->setModel(model);
-        // 设置矩阵
         shader_->setUniform("model", model->model());
-        for (int i = 0; i < model->nfaces(); i++) { 
-           Node nodes[3];
-            // nodes.resize(3);
-            for (int j = 0; j < 3; j++) { 
-                shader_->vertex(nodes[j], i, j);
-            } 
-            // 齐次空间裁剪(Homogeneous Space Clipping)
-            // std::vector<Node> list;
-            // list.emplace_back(nodes[0]);
-            // list.emplace_back(nodes[1]);
-            // list.emplace_back(nodes[2]);
-            // int num = clip(list);
-            // for(int i = 0; i < num; ++i) {
-            //     nodes[0] = list[i];
-            //     nodes[1] = list[(i + 1) % num];
-            //     nodes[2] = list[(i + 2) % num];
+        // if(model->type() != Model::Type::Circle) {
+            // 设置矩阵
+            for (int i = 0; i < model->nfaces(); i++) { 
+                Node nodes[3];
+                // nodes.resize(3);
+                for (int j = 0; j < 3; j++) { 
+                    shader_->vertex(nodes[j], i, j);
+                } 
+                // 齐次空间裁剪(Homogeneous Space Clipping)
+                // std::vector<Node> list;
+                // list.emplace_back(nodes[0]);
+                // list.emplace_back(nodes[1]);
+                // list.emplace_back(nodes[2]);
+                // int num = clip(list);
+                // for(int i = 0; i < num; ++i) {
+                //     nodes[0] = list[i];
+                //     nodes[1] = list[(i + 1) % num];
+                //     nodes[2] = list[(i + 2) % num];
                 triangle(nodes); 
-            // }
-        }
+                if(model->type() == Model::Type::Ball) {
+                    for(int j = 3; j < 6; ++j) {
+                        shader_->vertex(nodes[j - 3], i, j);
+                    }
+                    triangle(nodes);
+                }
+                // }
+            }
+        // } else {
+        //     // printf("----------\n");
+        //     Node node;
+        //     shader_->vertex(node, 0, 0);
+        //     cycle(node,((CircleModel*)model)->getRadius());
+        // }
     }
 
 }
 
+void Render::cycle(Node& node, double radius) {
+    for (int j = 0; j < 3; j++) { 
+        node.screen_coords = viewPortMatrix(width, height) * (node.coords /  node.coords[3]);
+    }
+    // std::array<int, 4> bbox = boundBox(nodes);
+    int left = node.screen_coords.x() - radius;
+    int right = node.screen_coords.x() + radius;
+    int up = node.screen_coords.y() + radius;
+    int down = node.screen_coords.y() - radius;
+    glBegin(GL_POINTS);
+    for(int i = std::max(0, left); i <= std::min( width, right); ++i) {
+        for(int j = std::max(0, down); j <= std::min(height, up); ++j) {
+            Vec3 tmp{i, j, 0};
+            if(!inCycle(tmp, homo2local(node.screen_coords), radius)) continue;
+            // printf("---------\n");
+            // Vec3 vec = barycentric(nodes, tmp);
+            // if(vec.x() < 0 || vec.y() < 0 || vec.z() < 0) {
+            //     continue;
+            // }
+            // vec[0] /= nodes[0].coords.z();
+            // vec[1] /= nodes[1].coords.z();
+            // vec[2] /= nodes[2].coords.z();
+            // 透视矫正 https://zhuanlan.zhihu.com/p/144331875
+            // double z = 1.0 / (vec[0] + vec[1] + vec[2]);
+            // double frag_depth = z;
+            // if(zbuffer_[i + j * width] == 0 || frag_depth < zbuffer_[i + j * width]) {
+            //     zbuffer_[i + j * width] = frag_depth;
+                TGAColor color;
+                bool flag = shader_->fragment(&node, tmp, color);
+                if(!flag) {
+                    image_.set(i, j, color);
+                    // TODO
+                    glColor3f(1.0f * color[2] / 255.0f, 1.0 * color[1] / 255.0f, 1.0 * color[0] / 255.0f);
+                    glVertex3f( 1.0 * i / width * 2.0 - 1. , 1.0 * j / height * 2.0 - 1., 0.0);
+                }
+            // }
+        }
+    }
+    glEnd();
+}
 bool insidePlane(PLANE plane, Vec4 vec) {
     switch(plane) {
         case W_PLANE:
@@ -247,8 +310,20 @@ Vec3 barycentric(Node* nodes, Vec3 p) {
     double alpha = 1 - beta - gamma;
     return Vec3{alpha, beta, gamma};
 }
+// bounding box
+std::array<int, 4> boundBox(Node* nodes) {
+    std::array<int, 4> res;
+    res[0] = std::floor(std::min(std::min(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
+    res[1] = std::ceil(std::max(std::max(nodes[0].screen_coords.y(), nodes[1].screen_coords.y()), nodes[2].screen_coords.y()));
+    res[2] = std::floor(std::min(std::min(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
+    res[3] = std::ceil(std::max(std::max(nodes[0].screen_coords.x(), nodes[1].screen_coords.x()), nodes[2].screen_coords.x()));
+    return res;
+}
 
-
+bool inCycle(Vec3 vec, Vec3 center, double radius) {
+    return std::sqrt((vec.x() - center.x()) * (vec.x() - center.x()) +
+         (vec.y() - center.y()) * (vec.y() - center.y())) <= radius;
+}
 
 void TestRender::render() {
     glBegin(GL_POINTS);

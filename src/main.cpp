@@ -27,16 +27,20 @@ void jsonTest() {
 
 int main() {
     render::Render render;
-    render::Node node[3];
-    node[0].coords = Vec4{1., 0.0, 0.2, 1.};
-    node[1].coords = Vec4{0., 1., 0.5, 1.};
-    node[2].coords = Vec4{0., 0., 1., 1.};
-    node[0].diffuse = render::TGAColor{255, 0, 0};
-    node[1].diffuse = render::TGAColor{0, 255, 0};
-    node[2].diffuse = render::TGAColor{0, 0, 255};
-    render.loadModel(node);
+    // render::Node node[3];
+    // node[0].coords = Vec4{1., 0.0, 0.2, 1.};
+    // node[1].coords = Vec4{0., 1., 0.5, 1.};
+    // node[2].coords = Vec4{0., 0., 1., 1.};
+    // node[0].diffuse = render::TGAColor{255, 0, 0};
+    // node[1].diffuse = render::TGAColor{0, 255, 0};
+    // node[2].diffuse = render::TGAColor{0, 0, 255};
+    // render.loadModel(node);
     // render.loadModel(load());
-    render.loadShader(new render::TriangleShader());
+    render::Node node;
+    node.coords = Vec4{0, 0, 1, 1};
+    render.loadModel(node, 0.3);
+    render.loadShader(new render::CircleShader());
+    // render.loadShader(new render::GouraudShader());
 
     render::Window window;
     window.init();

@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include "nlohmann/json.hpp"
+#include "util.h"
 
 
 namespace render {
@@ -34,7 +35,61 @@ void TriModel::Node(struct Node& tmp,int face, int i) {
 Mat4 TriModel::model() {
     return modelMat_;
 }
-// model
+
+
+// ==========================Circle =====================
+CircleModel::CircleModel(struct Node& node, double radius): center_(node), radius_(radius) {}
+void CircleModel::Node(struct Node& tmp,int face, int i){
+    // 消除这个判断，会生成一个空心的
+    if(i == 2) {
+        tmp.coords = center_.coords;
+        return ;
+    } 
+    double angle = 1.0 * (face + i) * 2. * std::numbers::pi / (radius_ * 100);
+    tmp.coords = Vec4{center_.coords.x() + radius_ * std::sin(angle), center_.coords.y() + radius_ * std::cos(angle), center_.coords.z(), 1.};
+    // std::stringstream ss;
+    // ss << tmp.coords;
+    // LOG_ERROR("%s -- %d -- %d",ss.str().c_str(), face, i);
+}
+Mat4 CircleModel::model() {
+    Mat4 modelMat;
+    modelMat <<  1, 0, 0, 0,
+                0, 1, 0, 0,
+                0 ,0 ,1, 0,
+                0, 0, 0, 1;
+    return modelMat;
+}
+// ===============================BallModel 球====================
+BallModel::BallModel(struct Node& node, double radius): center_(node), radius_(radius) {
+    total_ = 10000;
+}
+
+// lat 纬度 lon经度
+void BallModel::Node(struct Node& tmp,int face, int i) {
+    int per = total_  / 200;  // 每层总数
+    // if(face < total_ / 2) {
+    int index = face / per;
+    double theta = 1.0 * (index + i % 2) / 200. * std::numbers::pi ;
+    double alpha = 1.0 * ((face + i % 3) % per)  / per * 2 * std::numbers::pi;
+    tmp.coords = Vec4{center_.coords.x() + radius_ * std::cos(alpha) * std::sin(theta), 
+            center_.coords.y() + radius_ * std::cos(theta), center_.coords.z() + radius_ * std::sin(alpha) * std::sin(theta), 1.};
+    // } else {
+    //     int index = (face - total_ / 2) / per;
+    //     double theta = 1.0 * (index + 1 - i % 2) / 300. * std::numbers::pi ;
+    //     double alpha = 1.0 * ((face + i) % per)  / per * 2 * std::numbers::pi;
+    //     tmp.coords = Vec4{center_.coords.x() + radius_ * std::cos(alpha) * std::sin(theta), 
+    //             center_.coords.y() + radius_ * std::cos(theta), center_.coords.z() + radius_ * std::sin(alpha) * std::sin(theta), 1.};
+    // }
+}
+Mat4 BallModel::model() {
+    Mat4 modelMat;
+    modelMat <<  1, 0, 0, 0,
+                0, 1, 0, 0,
+                0 ,0 ,1, 0,
+                0, 0, 0, 1;
+    return modelMat;
+}
+//================================Object Model ===================
 // 读取json
 ObjModel::ObjModel(const std::string& path) {
     std::ifstream ifs(path);

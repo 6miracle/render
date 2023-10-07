@@ -14,13 +14,18 @@ public:
     ~Render() {
         image_.write_tga_file("image.tga");
         // zbuffer_.write_tga_file("depth.tga");
+        for(int i = 0; i < model_.size(); ++i) {
+            delete model_[i];
+        }
     }
     void loadModel(const std::string& path);
     void loadModel(Node* node);
+    void loadModel(Node& node, double radius);
     void loadShader(IShader* shader);
     virtual void render();
     // 光栅化
-    void triangle(Node* nodes);            
+    void triangle(Node* nodes);      
+    void cycle(Node& nodes, double radius);      
     void clear() { 
         image_.clear();
         std::fill(zbuffer_.begin(), zbuffer_.end(), 0);

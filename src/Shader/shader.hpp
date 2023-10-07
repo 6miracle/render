@@ -53,6 +53,20 @@ class TriangleShader:public IShader {
     return false;
   }
 };
+class CircleShader:public IShader {
+  void vertex(Node& node, int face, int nthvert) {
+      model_->Node(node, face, nthvert);
+      node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
+   }
+  bool fragment(Node* node, Vec3 vec, render::TGAColor& color) {
+    // LOG_ERROR("%d %d %d", ss.str().c_str());
+    // color = TGAColor{static_cast<unsigned char>(255.0 * vec.x() / width ), 
+    //   static_cast<unsigned char>(255.0 * vec.y() / height), static_cast<unsigned char>(255.0 * vec.x() / width)};
+    color = TGAColor{255, 255, 255, 255};
+    //  LOG_ERROR("%d %d %d", color[0], color[1], color[2]);
+    return false;
+  }
+};
 class RayShader: public render::IShader {
 public:
    void vertex(Node& node, int face, int nthvert) {
