@@ -9,6 +9,6 @@
 #include <cmath>
 #include <numbers>
 
-#include "util.h"
+#include "util.hpp"
 #include "config.h"
 #endif

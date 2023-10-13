@@ -3,7 +3,10 @@
 
 #include "tgaimage.h"
 namespace render {
-
+double DistributionGG(Vec3 N, Vec3 H, double roughness);
+double GeometrySmith(Vec3 N, Vec3 V, Vec3 L, double roughness);
+double fresnelSchlick(double cosTheta, double F0);
+double fresnelSchlick_IBL(double cosTheta, double F0, double roughness);
 // ray = a + tb
 class Ray {
 public:

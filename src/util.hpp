@@ -28,4 +28,17 @@ extern const int width;
 extern const int height;
 extern const int depth;
 
+
+template<typename T>
+T mix(T x, T y, double a) {
+    return x * (1 - a) + y * a;
+}
+
+inline double clamp(double v, double x, double y) {
+    return std::min(std::max(v, x), y);
+}
+
+inline render::Vec3 reflect(render::Vec3 l, render::Vec3 n) {
+    return (2 * n * (n * l) - l).normalized();
+}
 #endif

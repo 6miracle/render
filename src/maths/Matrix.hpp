@@ -2,7 +2,7 @@
 #define __RENDER_MATRIX_H__
 #include "maths/maths.hpp"
 #include "pch.h"
-#include "util.h"
+#include "util.hpp"
 #include <ostream>
 namespace render {
 template<size_t row, size_t column>

@@ -63,7 +63,16 @@ public:
     size_t nfaces() const override { return total_;}
     Type type() const override {  return Type::Ball; }
     double getRadius() { return radius_; }
+    TGAColor cubeMap(int face, Vec3 dir);
+    TGAColor prefilterMap(Vec3 ref, int level);
+    TGAColor irradianceMap(Vec3 normal); // 利用法线进行采样
+    TGAColor brdfLUT(Vec2 vec);
+    void loadCubeMap(const std::string& path);
 private:
+    TGAImage cubeMaps_[6];
+    TGAImage irradianceMap_; // 漫反射IBL贴图
+    TGAImage prefilterMap_; // 镜面反射
+    TGAImage brdfLUT_; // 
     struct Node center_;
     double radius_;
     double total_;
@@ -97,7 +106,7 @@ public:
     size_t nfaces() const override{ return faces.size(); }
     Mat3 face(size_t i) const { return faces[i]; }
 
-    void loadTexture(const std::string& filename, const std::string suffix, TGAImage& image);
+    // void loadTexture(const std::string& filename, const std::string suffix, TGAImage& image);
     void loadObj(const std::string& path);
     Mat4 model() override{ return modelMatrix_; }
     void test(std::ofstream& os) {
@@ -127,6 +136,7 @@ private:
     TGAImage specularMap{};
 
     TGAImage normalTanMap{};
+
     Mat4 modelMatrix_;
 };
 }

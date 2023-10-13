@@ -1,7 +1,7 @@
 #ifndef __RENDER_MATHS_H__
 #define __RENDER_MATHS_H__
 // #include "pch.h"
-#include "util.h"
+#include "util.hpp"
 #include <array>
 #include <cmath>
 #include <complex>
@@ -16,8 +16,9 @@ template<size_t N>
 class Vec {
 public:
     Vec() = default;
-    Vec(const std::initializer_list<double>& lists);
-    Vec(const std::initializer_list<int>& lists);
+    explicit Vec(double val) ;
+    explicit Vec(const std::initializer_list<double>& lists);
+    explicit Vec(const std::initializer_list<int>& lists);
     // 转置
     Mat<N, 1> Transpose();
     // 求角度
@@ -44,7 +45,9 @@ public:
     Vec<N> operator+(const Vec<N>& vec);
     Vec<N>& operator+=(const Vec<N>& vec);
     Vec<N>& operator-=(const Vec<N>& vec);
+    Vec<N> operator/(const Vec<N>& vec);
     Vec<N>& operator/=(double val);
+    Vec<N> pow(double val);
 
     double x() const;
     double y() const;
@@ -54,6 +57,12 @@ private:
     double array_[N] = {0};
 };
 
+template <size_t N>
+Vec<N>::Vec(double val) {
+    for(size_t i = 0; i < N; ++i) {
+        array_[i] = val;
+    }
+}
 
 template <size_t N>
 Vec<N>::Vec(const std::initializer_list<double>& lists) {
@@ -96,7 +105,7 @@ inline auto Vec<2>::cross(Vec<2> v) {
 }
 template<>
 inline auto Vec<3>::cross(Vec<3> v) {
-    Vec<3> vec = {array_[1] * v.array_[2] - array_[2] * v.array_[1],
+    Vec<3> vec{array_[1] * v.array_[2] - array_[2] * v.array_[1],
             array_[2] * v.array_[0] - array_[0] * v.array_[2],
             array_[0] * v.array_[1] - array_[1] * v.array_[0]
             };
@@ -117,7 +126,7 @@ double operator*(Vec<N> v1, Vec<N> v2) {
 // 加法
 template<>
 inline Vec<2> Vec<2>::operator+(const Vec<2>& vec) {
-    return {array_[0] + vec.array_[0], array_[1] + vec.array_[1]};
+    return Vec<2>{array_[0] + vec.array_[0], array_[1] + vec.array_[1]};
 }
 template<size_t N>
 Vec<N> Vec<N>::operator+(const Vec<N>& vec) {
@@ -146,7 +155,7 @@ Vec<N>& Vec<N>::operator-=(const Vec<N>& vec) {
 
 template<>
 inline Vec<2> Vec<2>::operator-(const Vec<2>& vec) {
-    return {array_[0] - vec.array_[0], array_[1] - vec.array_[1]};
+    return Vec<2>{array_[0] - vec.array_[0], array_[1] - vec.array_[1]};
 }
 template<size_t N>
 Vec<N> Vec<N>::operator-(const Vec<N>& vec) {
@@ -167,6 +176,16 @@ Vec<N> operator/(Vec<N> v1, double val) {
     }
     return vec;
 }
+template<size_t N> 
+Vec<N> Vec<N>::operator/(const Vec<N>& vec) {
+    Vec<N> res;
+    for(int i = 0; i < N; ++i) {
+        ASSERT(vec[i] != 0, "/0 error");
+        res[i] = array_[i] / vec.array_[i];
+    }
+    return res;
+}
+
 template<size_t N> 
 Vec<N>& Vec<N>::operator/=(double val) {
     ASSERT(val != 0, "divide by zero error");
@@ -191,6 +210,15 @@ Vec<N> operator*(double val, Vec<N> v1) {
     }
     return vec;
 }
+template<size_t N> 
+Vec<N> Vec<N>::pow(double val) {
+    Vec<N> res;
+    for(int i = 0; i < N; ++i) {
+        res[i] = std::pow(array_[i], val);
+    }
+    return res;
+}
+
 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, Vec<N> v) {
@@ -228,14 +256,23 @@ using Vec3 = Vec<3>;
 using Vec4 = Vec<4>;
 
 inline Vec4 local2homo(Vec3 vec) {
-    return {vec[0], vec[1], vec[2], 1.0};
+    return Vec4{vec[0], vec[1], vec[2], 1.0};
 }
 inline Vec3 homo2local(Vec4 vec) {
-    return {vec[0], vec[1], vec[2]};
+    return Vec3{vec[0], vec[1], vec[2]};
 }
 inline Vec4 localvhomo(Vec3 vec) {
-    return {vec[0], vec[1], vec[2], 0.0};
+    return Vec4{vec[0], vec[1], vec[2], 0.0};
 }
 
+inline Vec4 toVec4n(Vec3 vec) {
+    return Vec4{vec[0], vec[1], vec[2], 1.0};
+}
+inline Vec4 toVec4v(Vec3 vec) {
+    return Vec4{vec[0], vec[1], vec[2], 0.0};
+}
+inline Vec3 toVec3(Vec4 vec) {
+    return Vec3{vec[0], vec[1], vec[2]};
+}
 }
 #endif

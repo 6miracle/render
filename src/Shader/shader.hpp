@@ -1,7 +1,8 @@
 #ifndef __RENDER_SHADER_H__
 #define __RENDER_SHADER_H__
 #include "Engine/Scene/Scene.h"
-#include "util.h"
+#include "Engine/camera/camera.h"
+#include "util.hpp"
 #include <memory>
 #include <sstream>
 #include <unordered_map>
@@ -11,6 +12,7 @@
 #include "pch.h"
 #include "maths/maths.hpp"
 #include "tgaimage.h"
+#include "Engine/Scene/Scene.h"
 
 namespace render { 
 class IShader {
@@ -238,6 +240,327 @@ private:
 //   Mat4 mvpLight_;
 
 // };
+
+
+// vec3 F  = fresnelSchlick(max(dot(H, V), 0.0), F0);
+// float NDF = DistributionGGX(N, H, roughness);       
+// float G   = GeometrySmith(N, V, L, roughness);    
+// vec3 nominator    = NDF * G * F;
+// float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.001; 
+// vec3 specular     = nominator / denominator;  
+// vec3 kS = F;
+// vec3 kD = vec3(1.0) - kS;
+
+// kD *= 1.0 - metallic;   
+class PBRShader:public IShader {
+public:
+  void vertex(Node& node,int face, int nthvert) {
+    model_->Node(node, face, nthvert);
+    uniform_MV = map_["view"] * map_["model"];
+    uniform_IT_MV = uniform_MV.invert().transpose();
+    node.coords = map_["projection"] * uniform_MV  * node.coords;
+  }
+  bool fragment(Node* nodes, Vec3 vec, TGAColor& color) {
+    Vec3 lightPos[4]{Vec3{0, 0, 1}, Vec3{0, 1, 0}, Vec3{1, 0, 0}, Vec3{1, 1, 1}};
+    TGAColor lightColor[4] = {TGAColor{50, 20, 30, 255}, TGAColor{100, 100, 100, 255},
+                              TGAColor{255, 255, 255, 255}, TGAColor{200, 100, 200, 255}};
+    double roughness = 0.5;
+    Vec3 normal = toVec3(uniform_IT_MV * toVec4v((nodes[0].normal * vec[0] + nodes[1].normal * vec[1] + nodes[2].normal * vec[2]).normalized()));
+    Vec4 view_node = map_["projection"].invert() * (nodes[0].coords * vec[0] + nodes[1].coords * vec[1] + nodes[2].coords * vec[2]);
+    Vec3 view = toVec3(-1 * view_node).normalized();
+   
+    // Vec3 F0 = Vec3(0.04); // 基础反射率
+    // int metallic = 0;
+    // Vec3 albedo = {255, 255, 255};
+    // F0 = mix(F0, albedo, metallic);
+
+    double F0 = 0.04;
+    double metallic = 0;
+    double albedo = 255;
+    F0 = mix(F0, albedo, metallic);
+    // 出射光线的辐射率/ reflectance equation / BRDF
+    Vec3 lo = Vec3(0.0);
+    // 四个方向的光
+    for(int i = 0; i < 4; ++i) {
+      //  calculate per-light radiance
+      Vec3 L = (lightPos[i] - toVec3(view_node)).normalized(); // 光线照射方向
+      Vec3 H = (view + L).normalized(); // 半程向量
+      double distance = (lightPos[i] - toVec3(view_node)).norm();  // 距离
+      double attenuation = 1 / (distance * distance); // 光线衰减率
+      Vec3 radiance = lightColor[i].toVec3() * attenuation;
+
+      // Cook-Torrance BRDF
+      double NDF = DistributionGG(normal, H, roughness);
+      double G = GeometrySmith(normal, view, L, roughness);
+      double F = fresnelSchlick(clamp(H * view, 0.0, 1.0), F0);
+
+      double numerator = NDF * G * F;
+      double denominator = 4.0 * std::max(normal * view, 0.0) * std::max(normal * L, 0.0) + 0.0001;
+      double specular = numerator / denominator;
+
+      double kS = F;
+      double kD = (1.0 - kS) * (1.0 - metallic);
+      double NdotL = std::max(normal * L, 0.0);
+
+      lo += (kD * albedo / std::numbers::pi + specular) * radiance * NdotL;
+      
+    }
+
+    // ================ambient IBL
+    // Vec3 F = fresnelSchlick_IBL(std::max(normal * view, 0.), F0, roughness);
+    // Vec3 kS = F;    
+    // Vec3 kD = (Vec3(1.0) - kS) * (1.0 - metallic);
+
+    // TGAColor irradiance = ((BallModel*)model_)->irradianceMap(normal);
+    // TGAColor diffuse = irradiance * albedo;
+
+    // const float MAX_REFLECTION_LOD = 4.0;
+    // TGAColor prefilterColor = ((BallModel*)model_)->prefilterMap(,roughness * MAX_REFLECTION_LOD);
+
+
+    Vec3 ambient = Vec3(0.03) * albedo; // *ao
+
+
+
+
+    Vec3 vcolor = ambient + lo;
+    // HDR tonemapping
+    vcolor = vcolor / (vcolor + Vec3(1.0));
+    // gamma correct
+    vcolor = vcolor.pow(1.0 / 2.2);  
+
+    for(int i = 0; i < 3; ++i) {
+      color[i] = vcolor[2 - i];
+    }
+    return false;
+  }
+private:  
+  Mat4 uniform_MV;
+  Mat4 uniform_IT_MV;
+};
+
+static int getFace(Vec3 dir) {
+  int Max = 0;
+  for(int i = 1; i < 3; ++i) {
+    if(std::abs(dir[i]) > std::abs(dir[Max])) { Max = i; }
+  }
+  return dir[Max] >= 0 ? Max : Max + 1;
+}
+
+class SkyBoxShader: public IShader {
+public:
+    void vertex(Node& node,int face, int nthvert) {
+      model_->Node(node, face, nthvert);
+      // uniform_MV = map_["view"] * map_["model"];
+      // uniform_IT_MV = uniform_MV.invert().transpose();
+      node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
+    }
+    bool fragment(Node* nodes, Vec3 vec, TGAColor& color) {
+      Vec3 center;
+      Vec2 uvs[3];
+      TGAColor colors[3];
+      for(int i = 0; i < 3; ++i) {
+        Vec3 dir = (toVec3(nodes[i].screen_coords) - center).normalized();
+        int face = getFace(dir);
+        colors[i] = ((BallModel*)model_)->cubeMap(face, dir);
+      }
+      Vec2 uv = uvs[0] * vec[0] +  uvs[1] * vec[1] + uvs[2] * vec[2];
+      color = colors[0] * vec[0] + colors[1] * vec[1] + colors[2] * vec[2];
+      return false;
+    }
+
+private:
+};
+
+class IrradianceShader:public IShader {
+public:
+   void vertex(Node& node, int face, int nthvert) {
+      model_->Node(node, face, nthvert);
+      node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
+   }
+  bool fragment(Node* nodes, Vec3 vec, render::TGAColor& color) {
+      Vec3 normal = toVec3((map_["view"] * map_["model"]).invert().transpose()
+         * toVec4v((nodes[0].normal * vec[0] + nodes[1].normal * vec[1] + nodes[2].normal * vec[2]).normalized()));
+      TGAColor irradiance;
+      // 向量坐标空间
+      Vec3 up{0.0, 1.0, 0.0};
+      Vec3 right = up.cross(normal).normalized();
+      up = normal.cross(right).normalized();
+
+      double sampleData = 0.025;
+      double sampleNum = 0.0;
+
+      for(double phi = 0.0; phi < 2.0 * std::numbers::pi; phi += sampleData) {
+        for(double theta = 0.0; theta < 0.5 * std::numbers::pi; theta += sampleData) {
+          Vec3 tangentSample = Vec3{std::sin(theta) * std::cos(phi), std::sin(theta) * std::sin(phi), std::cos(theta)};
+          Vec3 sampleVec = tangentSample.x() * right + tangentSample.y() * up + tangentSample.z() * normal;
+
+          int face = getFace(sampleVec);
+          irradiance = irradiance +  ((BallModel*)model_)->cubeMap(face, sampleVec) * std::cos(theta) * std::sin(theta);
+          sampleNum++;
+        }
+      }
+
+      irradiance =  irradiance * std::numbers::pi * (1.0 / sampleNum);
+      color = irradiance; 
+
+      return false;
+  }
+
+private:
+};
+
+// 重要性采样 蒙特卡洛方法Hammersley 序列
+double RadicalInverse_VdC(int bits) 
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+// ----------------------------------------------------------------------------
+Vec2 Hammersley(int i, int N)
+{
+    return Vec2{double(i)/double(N), RadicalInverse_VdC(i)};
+}  
+
+class PreFilterShader:public IShader {
+public:
+   void vertex(Node& node, int face, int nthvert) {
+      model_->Node(node, face, nthvert);
+      node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
+   }
+  bool fragment(Node* nodes, Vec3 vec, render::TGAColor& color) {
+      Vec3 normal = toVec3((map_["view"] * map_["model"]).invert().transpose()
+         * toVec4v((nodes[0].normal * vec[0] + nodes[1].normal * vec[1] + nodes[2].normal * vec[2]).normalized()));
+      Vec3 R = normal;
+      Vec3 v = R;
+
+      const int sampleNum = 1024u;
+      TGAColor prefilteredColor;
+      double totalWeight = 0.;
+
+      for(int i = 0; i < sampleNum; ++i) {
+
+        // 获得wi, 即入射光线
+        // Vec3 l = 
+        // double nl = std::max(0., normal * l);
+
+
+        // 可见性判断
+      }
+
+      for(int i = 0; i < 3; ++i) {
+        prefilteredColor[i] = prefilteredColor[i] / totalWeight;
+      }
+      color = prefilteredColor;
+      return false;
+  }
+
+private:
+};
+
+
+class InterateBRDFSHader:public IShader {
+public:
+   void vertex(Node& node, int face, int nthvert) {
+      model_->Node(node, face, nthvert);
+      node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
+   }
+  bool fragment(Node* node, Vec3 vec, render::TGAColor& color) {
+      //   double y = (node[0].screen_coords.y() * vec.x() +  node[1].screen_coords.y() * vec.y() +  node[2].screen_coords.y() * vec.z()) / height;
+      // color = scene_->color(y);
+      return false;
+  }
+
+private:
+};
+
+//=================IBL==================
+class IBLShader:public IShader {
+public:
+  void vertex(Node& node,int face, int nthvert) {
+    model_->Node(node, face, nthvert);
+    uniform_MV = map_["view"] * map_["model"];
+    uniform_IT_MV = uniform_MV.invert().transpose();
+    node.coords = map_["projection"] * uniform_MV  * node.coords;
+  }
+  bool fragment(Node* nodes, Vec3 vec, TGAColor& color) {
+    Vec3 lightPos[4] = {Vec3{0, 0, 1}, Vec3{0, 1, 0}, Vec3{1, 0, 0}, Vec3{1, 1, 1}};
+    TGAColor lightColor[4] = {TGAColor{50, 20, 30, 255}, TGAColor{100, 100, 100, 255},
+                              TGAColor{255, 255, 255, 255}, TGAColor{200, 100, 200, 255}};
+
+    Vec3 normal = toVec3(uniform_IT_MV * toVec4v((nodes[0].normal * vec[0] + nodes[1].normal * vec[1] + nodes[2].normal * vec[2]).normalized()));
+    Vec4 view_node = map_["projection"].invert() * (nodes[0].coords * vec[0] + nodes[1].coords * vec[1] + nodes[2].coords * vec[2]);
+    Vec3 view = toVec3(-1 * view_node).normalized();
+     Vec3 refl = ::reflect(view, normal);
+
+    // material
+    double metallic = 0;
+    double albedo = 255;
+    double roughness = 0.5;
+    double ao = 1;
+
+    double F0 = 0.04;
+    F0 = mix(F0, albedo, metallic);
+    // 出射光线的辐射率/ reflectance equation / BRDF
+    Vec3 lo = Vec3(0.0);
+    // ===============四个方向的光===============
+    for(int i = 0; i < 4; ++i) {
+      //  calculate per-light radiance
+      Vec3 L = (lightPos[i] - toVec3(view_node)).normalized(); // 光线照射方向
+      Vec3 H = (view + L).normalized(); // 半程向量
+      double distance = (lightPos[i] - toVec3(view_node)).norm();  // 距离
+      double attenuation = 1 / (distance * distance); // 光线衰减率
+      Vec3 radiance = lightColor[i].toVec3() * attenuation;
+
+      // Cook-Torrance BRDF
+      double NDF = DistributionGG(normal, H, roughness);
+      double G = GeometrySmith(normal, view, L, roughness);
+      double F = fresnelSchlick(clamp(H * view, 0.0, 1.0), F0);
+
+      double numerator = NDF * G * F;
+      double denominator = 4.0 * std::max(normal * view, 0.0) * std::max(normal * L, 0.0) + 0.0001;
+      double specular = numerator / denominator;
+
+      double kS = F;
+      double kD = (1.0 - kS) * (1.0 - metallic);
+      double NdotL = std::max(normal * L, 0.0);
+
+      lo += (kD * albedo / std::numbers::pi + specular) * radiance * NdotL;
+      
+    }
+    double F = fresnelSchlick_IBL(std::max(normal * view, 0.), F0, roughness);
+    double kS = F;
+    double kD = (1.0 - kS) * (1.0 - metallic);
+
+    TGAColor irradiance = ((BallModel*)model_)->irradianceMap(normal);
+    TGAColor diffuse = irradiance * albedo;
+
+    const float MAX_REFLECTION_LOD = 4.0;
+    TGAColor prefilterColor = ((BallModel*)model_)->prefilterMap(refl,(int)(roughness * MAX_REFLECTION_LOD));
+    TGAColor brdf = ((BallModel*)model_)->brdfLUT(Vec2{std::max(normal * view, 0.), roughness});
+    
+    TGAColor specluar =  prefilterColor * (F * brdf.bgra[0] + brdf.bgra[1]);
+    Vec3 ambient = (kD * diffuse.toVec3() + specluar.toVec3()) * ao;
+    Vec3 vcolor = ambient + lo;
+
+    // HDR tonemapping
+    vcolor = vcolor / (vcolor + Vec3(1.0));
+    // gamma correct
+    vcolor = vcolor.pow(1.0 / 2.2);  
+
+    for(int i = 0; i < 3; ++i) {
+      color[i] = vcolor[2 - i];
+    }
+    return false;
+  }
+private:  
+  Mat4 uniform_MV;
+  Mat4 uniform_IT_MV;
+};
 }
 
 #endif

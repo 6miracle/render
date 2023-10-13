@@ -7,7 +7,7 @@
 #include <sstream>
 #include <string>
 #include "nlohmann/json.hpp"
-#include "util.h"
+#include "util.hpp"
 
 
 namespace render {
@@ -17,7 +17,7 @@ Mat4 translate(Vec3 vec);
 Mat4 rotate(double angle);
 // 缩放
 Mat4 scale(Vec3 vec);
-
+void loadTexture(const std::string& filename, const std::string suffix, TGAImage& image);
 
 TriModel::TriModel(struct Node* node) {
     for(int i = 0; i < 3; ++i) {
@@ -89,6 +89,60 @@ Mat4 BallModel::model() {
                 0, 0, 0, 1;
     return modelMat;
 }
+
+
+TGAColor BallModel::cubeMap(int face, Vec3 dir) {
+    Vec2 uv;
+    double s, t, m;
+    switch(face) {
+        case 0:
+        s = -dir.z();
+        t = -dir.y();
+        m = dir.x();
+        break;
+        case 1:
+        s = dir.z();
+        t = -dir.y();
+        m = dir.x();
+        break;
+        case 2:
+        s = dir.x();
+        t = dir.z();
+        m = dir.y();
+        break;
+        case 3:
+        s = dir.x();
+        t = -dir.z();
+        m = dir.y();
+        break;
+        case 4:
+        s = dir.x();
+        t = -dir.y();
+        m = dir.z();
+        break;
+        case 5:
+        s = dir.x();
+        t = -dir.y();
+        m = dir.z();
+        break;
+    }
+    uv[0] = std::min(std::max(0., 1. / 2. * (1. + (s / std::abs(m)))), 1.);
+    uv[1] = std::min(std::max(0., 1. / 2. * (1. + (t / std::abs(m)))), 1.);
+    return cubeMaps_[face].get(uv.x() * cubeMaps_[face].width(), uv.y() * cubeMaps_[face].height());
+}
+void BallModel::loadCubeMap(const std::string& path) {
+    std::vector<std::string> faces = {
+        "right.tga",
+        "left.tga",
+        "top.tga",
+        "bottom.tga",
+        "front.tga",
+        "back.tga"
+    };
+    for(int i = 0; i < 6; ++i) {
+        loadTexture(path, "/" + faces[i], cubeMaps_[i]);
+    }
+}
 //================================Object Model ===================
 // 读取json
 ObjModel::ObjModel(const std::string& path) {
@@ -135,16 +189,16 @@ void ObjModel::loadObj(const std::string& path) {
             double x, y, z;
             std::istringstream(str.substr(2)) >> x >> y >> z;
             // os <<nodes.size() + 1 << " "<<  x  <<" " << y << " " << z <<"\n";
-            nodes.push_back({x, y ,z});
+            nodes.push_back(Vec3{x, y ,z});
             // os << nodes[nodes.size() - 1] << "\n";
         } else if(s == "vt") {
             double x, y;
             std::istringstream(str.substr(2)) >> x >> y;
-            textures.push_back({x, y});
+            textures.push_back(Vec2{x, y});
         } else if(s == "vn") {
             double x, y, z;
             std::istringstream(str.substr(2)) >> x >> y >> z;
-            normals.push_back({x, y, z});
+            normals.push_back(Vec3{x, y, z});
         } else if(s == "f ") {
             std::istringstream iss(str.substr(2));
             std::string tmp;
@@ -187,7 +241,7 @@ std::string ObjModel::ToString() const {
     return ss.str();
 }
 
-void ObjModel::loadTexture(const std::string& filename, const std::string suffix, TGAImage& image) {
+void loadTexture(const std::string& filename, const std::string suffix, TGAImage& image) {
     size_t dot = filename.find_last_of(".");
     if(dot == std::string::npos) return ;
     std::string texfile = filename.substr(0, dot) + suffix;

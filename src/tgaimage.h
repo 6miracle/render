@@ -32,6 +32,8 @@ struct TGAColor {
     TGAColor(const std::initializer_list<uint8_t>& list);
     uint8_t& operator[](const int i) { return bgra[i]; }
     TGAColor& operator*(double val);
+    Vec3 toVec3() const { return Vec3{bgra[2], bgra[1], bgra[0]}; }
+    Vec4 toVec4() const { return Vec4{bgra[3], bgra[2], bgra[1], bgra[0]}; }
     TGAColor operator+(const TGAColor& color) { 
         TGAColor result;
         for(int i = 0; i < 4; ++i) {

@@ -35,12 +35,12 @@ int main() {
     // node[1].diffuse = render::TGAColor{0, 255, 0};
     // node[2].diffuse = render::TGAColor{0, 0, 255};
     // render.loadModel(node);
-    // render.loadModel(load());
-    render::Node node;
-    node.coords = Vec4{0, 0, 1, 1};
-    render.loadModel(node, 0.3);
-    render.loadShader(new render::CircleShader());
-    // render.loadShader(new render::GouraudShader());
+    render.loadModel(load());
+    // render::Node node;
+    // node.coords = Vec4{0, 0, 1, 1};
+    // render.loadModel(node, 0.3);
+    // render.loadShader(new render::CircleShader());
+    render.loadShader(new render::GouraudShader());
 
     render::Window window;
     window.init();

@@ -6,7 +6,7 @@
 #include "maths/Matrix.hpp"
 #include "maths/maths.hpp"
 #include "tgaimage.h"
-#include "util.h"
+#include "util.hpp"
 #include <array>
 #include <cmath>
 #include "GLFW/glfw3.h"

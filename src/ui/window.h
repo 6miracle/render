@@ -7,7 +7,7 @@
 #include "GLFW/glfw3native.h"
 #include "pch.h"
 #include "tgaimage.h"
-#include "util.h"
+#include "util.hpp"
 
 namespace render {
 #define ASSERT1(x) if(!(x)) exit(0);
