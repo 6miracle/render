@@ -8,7 +8,14 @@
 #include "Shader/shader.hpp"
 namespace render {
 
-class Render {
+class IRender {
+public:
+    virtual void render(const Scene& scene) = 0;
+    virtual void clear() = 0;
+};
+
+// 光栅化渲染器
+class Render:public IRender {
 public:
     Render();
     ~Render() {
@@ -22,7 +29,7 @@ public:
     void loadModel(Node* node);
     void loadModel(Node& node, double radius);
     void loadShader(IShader* shader);
-    virtual void render();
+    virtual void render(const Scene& scene);
     // 光栅化
     void triangle(Node* nodes);      
     void cycle(Node& nodes, double radius);      
@@ -40,7 +47,7 @@ private:
 class TestRender: public Render {
 public:
 
-    void render() override;
+    void render(const Scene& scene) override;
 private:
 
 };

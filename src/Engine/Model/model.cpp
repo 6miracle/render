@@ -3,6 +3,7 @@
 #include "tgaimage.h"
 #include <algorithm>
 #include <fstream>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -96,35 +97,35 @@ TGAColor BallModel::cubeMap(int face, Vec3 dir) {
     double s, t, m;
     switch(face) {
         case 0:
-        s = -dir.z();
-        t = -dir.y();
-        m = dir.x();
-        break;
+            s = -dir.z();
+            t = -dir.y();
+            m = dir.x();
+            break;
         case 1:
-        s = dir.z();
-        t = -dir.y();
-        m = dir.x();
-        break;
+            s = dir.z();
+            t = -dir.y();
+            m = dir.x();
+            break;
         case 2:
-        s = dir.x();
-        t = dir.z();
-        m = dir.y();
-        break;
+            s = dir.x();
+            t = dir.z();
+            m = dir.y();
+            break;
         case 3:
-        s = dir.x();
-        t = -dir.z();
-        m = dir.y();
-        break;
+            s = dir.x();
+            t = -dir.z();
+            m = dir.y();
+            break;
         case 4:
-        s = dir.x();
-        t = -dir.y();
-        m = dir.z();
-        break;
+            s = dir.x();
+            t = -dir.y();
+            m = dir.z();
+            break;
         case 5:
-        s = dir.x();
-        t = -dir.y();
-        m = dir.z();
-        break;
+            s = dir.x();
+            t = -dir.y();
+            m = dir.z();
+            break;
     }
     uv[0] = std::min(std::max(0., 1. / 2. * (1. + (s / std::abs(m)))), 1.);
     uv[1] = std::min(std::max(0., 1. / 2. * (1. + (t / std::abs(m)))), 1.);
@@ -176,6 +177,8 @@ void ObjModel::load(const std::string& path) {
     }
     loadObj(data["mesh"]);
 }
+
+
 // 加载模型
 void ObjModel::loadObj(const std::string& path) {
     std::ifstream is(path);

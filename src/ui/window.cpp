@@ -1,5 +1,6 @@
 #include "window.h"
 #include "Engine/Render.h"
+#include "Engine/Tracer.h"
 #include "Engine/camera/camera.h"
 #include "GLFW/glfw3.h"
 #include "tgaimage.h"
@@ -46,6 +47,7 @@ void updateTime() {
 
 Window::Window(int width, int height, const char* title):  width_(width), height_(height), title_(title){}
 
+// glfw坐标系左上角是(0,0)
 void Window::init() {
     glfwInit();
     window_ = glfwCreateWindow(width_, height_, title_.c_str(), nullptr, nullptr);
@@ -63,8 +65,11 @@ void Window::init() {
     glfwSetMouseButtonCallback(window_, mouseButtonCallback);
 }
 
-void Window::loadRender(Render* render) {
+void Window::loadRender(IRender* render) {
     render_ = render;
+}
+void Window::loadScene(Scene* scene) {
+    scene_ = scene;
 }
 void Window::draw() {
     bool flag = true;
@@ -75,7 +80,7 @@ void Window::draw() {
         glClear(GL_COLOR_BUFFER_BIT);
         // 渲染逻辑
         render_->clear();
-        render_->render();
+        render_->render(*scene_);
         
         glfwSwapBuffers(window_);
         glfwPollEvents();
@@ -138,6 +143,7 @@ void mouseButtonCallback (GLFWwindow *window, int button, int action, int mode) 
             if(button == GLFW_MOUSE_BUTTON_LEFT) {
                 move_mode = true;
                 glfwGetCursorPos(window, &lastX, &lastY);
+                // std::cout << lastX << "  " << lastY << '\n';
             }
             break;
         case GLFW_RELEASE:
@@ -146,6 +152,25 @@ void mouseButtonCallback (GLFWwindow *window, int button, int action, int mode) 
             }
             break;
     }
+}
+
+Editor::Editor(int width, int height): width_(width), height_(height),image_(width, height, 3), filename_("result.tga") {
+
+ }
+
+void Editor::init() {
+     
+}
+void Editor::loadRender(IRender* render) {
+    render_ = render;
+}
+void Editor::loadScene(Scene* scene) {
+    scene_ = scene;
+}
+void Editor::draw() {
+    static_cast<Tracer*>(render_)->loadBuffer(&image_);
+    render_->render(*scene_);
+    image_.write_tga_file(filename_);
 }
 
 }

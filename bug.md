@@ -4,4 +4,5 @@
 ### projection投影矩阵不正确导致向量第四个值极小，归一化之后出错
 
 ### glfw 设置glbegin的时候GL_POINTS写成了GL_POINT
-## view矩阵应为modelView
+## view矩阵应为modelView\
+### 变量名字写错，用错对象，用了正在更改的对象

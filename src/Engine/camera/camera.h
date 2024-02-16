@@ -31,6 +31,7 @@ public:
     Vec3 up_;
     Vec3 right_;
     Vec3 worldup_;
+    Vec3 target_;
 
     // 欧拉角
     double yaw_;   // 偏航角
@@ -39,6 +40,10 @@ public:
     double speed_; // 鼠标移动速度
     double sensiticity_; // 鼠标灵敏度
     double zoom_; // 缩放级别(视野值)
+
+    // 用于tracer
+    double defocus_angle = 0;  // Variation angle of rays through each pixel
+    double focus_dist = 10.0;    // Distance from camera lookfrom point to plane of perfect focus
 public:
     virtual Mat4 getViewMatrix();
     virtual void updateCameraVectors();
@@ -46,6 +51,8 @@ public:
 
     virtual void processMouseMovement(double xoffset, double yoffset, bool constrainPitch = true);
     virtual void ProcessMouseScroll(double yoffset);
+    double focalLength();
+    std::pair<double,double> ViewportLength();
 
     CameraType type() { return type_; }
     static Camera* GetCamera(CameraType type = FPS, Vec3 position = Vec3{0.0, 0.0, 3.0}, Vec3 up = Vec3{0.0, 1.0, 0.0}, 

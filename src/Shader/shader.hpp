@@ -3,6 +3,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/camera/camera.h"
 #include "util.hpp"
+#include <cmath>
 #include <memory>
 #include <sstream>
 #include <unordered_map>
@@ -410,9 +411,8 @@ public:
 private:
 };
 
-// 重要性采样 蒙特卡洛方法Hammersley 序列
-double RadicalInverse_VdC(int bits) 
-{
+// 重要性采样 蒙特卡洛方法Hammersley 序列 
+inline float RadicalInverse_VdC(int bits) {
     bits = (bits << 16u) | (bits >> 16u);
     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
     bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
@@ -421,10 +421,30 @@ double RadicalInverse_VdC(int bits)
     return float(bits) * 2.3283064365386963e-10; // / 0x100000000
 }
 // ----------------------------------------------------------------------------
-Vec2 Hammersley(int i, int N)
-{
+// 获得采样向量
+inline Vec2 Hammersley(int i, int N) {
     return Vec2{double(i)/double(N), RadicalInverse_VdC(i)};
 }  
+
+inline Vec3 ImportanceSampleGGX(Vec2 Xi, Vec3 N, float roughness) {
+  double a = roughness * roughness;
+
+  double phi = 2.0 * std::numbers::pi * Xi.x();
+  double cosTheta = sqrt((1.0 - Xi.y()) / 1.0 + (a * a - 1.0) * Xi.y());
+  double sinTheta = sqrt(1. - cosTheta * cosTheta);
+
+  Vec3 H;
+  H[0] = std::cos(phi) * sinTheta;
+  H[1] = std::sin(phi) * sinTheta;
+  H[2] = cosTheta;
+
+  Vec3 up = std::abs(N.z()) < 0.999 ? Vec3{0., 0., 1.} : Vec3{1., 0., 0.};
+  Vec3 tangent = up.cross(N).normalized();
+  Vec3 bitangent = N.cross(tangent).normalized();
+
+  Vec3 sampleVec = tangent * H.x() + bitangent * H.y() + N * H.z();
+  return sampleVec.normalized();
+}
 
 class PreFilterShader:public IShader {
 public:
@@ -433,6 +453,9 @@ public:
       node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
    }
   bool fragment(Node* nodes, Vec3 vec, render::TGAColor& color) {
+      // materail
+      double roughness = 0.5;
+
       Vec3 normal = toVec3((map_["view"] * map_["model"]).invert().transpose()
          * toVec4v((nodes[0].normal * vec[0] + nodes[1].normal * vec[1] + nodes[2].normal * vec[2]).normalized()));
       Vec3 R = normal;
@@ -445,11 +468,28 @@ public:
       for(int i = 0; i < sampleNum; ++i) {
 
         // 获得wi, 即入射光线
+        Vec2 Xi = Hammersley(i, sampleNum);
+        Vec3 H = ImportanceSampleGGX(Xi, normal, roughness);
+        Vec3 L = (2. * (v * H) * H - v).normalized();
         // Vec3 l = 
-        // double nl = std::max(0., normal * l);
+        double nl = std::max(0., normal * L);
 
+        if(nl > 0.0) {
+          double d = DistributionGG(normal, H, roughness);
+          double nh = std::max(normal * v, 0.0);
+          double nv = std::max(v * H, 0.0);
+          double pdf = d * nh / (4 * nv) + 0.0001;
 
-        // 可见性判断
+          double resolution = 512.0; 
+          double saTexel = 4. * std::numbers::pi / (6.0 * resolution * resolution);
+          double saSample = 1.0 / (sampleNum * pdf + 0.0001);
+          double mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
+
+          // TODO:level 分层
+          prefilteredColor = prefilteredColor + ((BallModel*)model_)->cubeMap(getFace(L) ,L) * nl; // 暂时不分层
+          totalWeight += nl;
+        }
+
       }
 
       for(int i = 0; i < 3; ++i) {
@@ -470,8 +510,39 @@ public:
       node.coords = map_["projection"] * map_["view"] * map_["model"] * node.coords;
    }
   bool fragment(Node* node, Vec3 vec, render::TGAColor& color) {
-      //   double y = (node[0].screen_coords.y() * vec.x() +  node[1].screen_coords.y() * vec.y() +  node[2].screen_coords.y() * vec.z()) / height;
-      // color = scene_->color(y);
+    // 设置
+      double roughness = 0.5;
+      double nv = 0.5;
+
+      Vec3 V{std::sqrt(1. - nv * nv), 0., nv};
+
+      double A = 0.0, B = 0.0;
+      Vec3 N = Vec3{0.0, 0.0, 1.0};
+
+      const int sampleNum = 1024;
+      for(int i = 0;i < sampleNum; ++i) {
+        Vec2 Xi = Hammersley(i,sampleNum);
+        Vec3 H = ImportanceSampleGGX(Xi, N, roughness);
+        Vec3 L = (2.0 * (V * H) *H - V).normalized();
+
+        double nl = std::max(L.z(), 0.);
+        double nh = std::max(H.z(), 0.);
+        double vh = std::max(V * H, 0.0);
+
+        if(nl > 0.0) {
+          double G = GeometrySmith(N, V, L, roughness);
+          double G_Vis = (G * vh) / (nh * nv);
+          double fc = std::pow(1 - vh, 5.);
+
+          A += (1.0 - fc) * G_Vis;
+          B += fc * G_Vis; 
+        }
+      }
+      A /= sampleNum;
+      B /= sampleNum;
+
+      color[0] = A;
+      color[1] = B;
       return false;
   }
 
@@ -495,7 +566,7 @@ public:
     Vec3 normal = toVec3(uniform_IT_MV * toVec4v((nodes[0].normal * vec[0] + nodes[1].normal * vec[1] + nodes[2].normal * vec[2]).normalized()));
     Vec4 view_node = map_["projection"].invert() * (nodes[0].coords * vec[0] + nodes[1].coords * vec[1] + nodes[2].coords * vec[2]);
     Vec3 view = toVec3(-1 * view_node).normalized();
-     Vec3 refl = ::reflect(view, normal);
+     Vec3 refl = reflect(view, normal);
 
     // material
     double metallic = 0;

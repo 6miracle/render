@@ -1,7 +1,9 @@
 #ifndef __RENDER_UTIL_H__
 #define __RENDER_UTIL_H__
 #include "assert.h"
+#include <numbers>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define ASSERT(x, message) assert(x || message)
 static FILE* fp = NULL;
@@ -24,21 +26,34 @@ static void output(const char* file, const char* function, int line) {
     fprintf(fp, "%s-%s-%d: ", file, function, line);
 }
 
+// inline double random_double() {
+//     static std::uniform_real_distribution<double> distribution(0.0, 1.0);
+//     static std::mt19937 generator;
+//     return distribution(generator);
+// }
+
+// 返回[0,1)
+inline double random_double() {
+    return rand() / (RAND_MAX + 1.0);
+}
+
+// 返回[min, max)
+inline double random_double(double min, double max) {
+    return min + (max - min) * random_double();
+}
+
+inline int random_int(double min, double max) {
+    return static_cast<int>(random_double(min,max + 1));
+}
+
+
+// 角度转弧度
+inline double deg2rad(const double deg) {
+    return deg * std::numbers::pi / 180.0;
+}
 extern const int width;
 extern const int height;
 extern const int depth;
 
 
-template<typename T>
-T mix(T x, T y, double a) {
-    return x * (1 - a) + y * a;
-}
-
-inline double clamp(double v, double x, double y) {
-    return std::min(std::max(v, x), y);
-}
-
-inline render::Vec3 reflect(render::Vec3 l, render::Vec3 n) {
-    return (2 * n * (n * l) - l).normalized();
-}
 #endif

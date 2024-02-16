@@ -26,10 +26,22 @@ static Mat4 lookAt(Vec3 position, Vec3 center, Vec3 up) {
 double radians(double angle) {
    return angle / 180.0 * std::numbers::pi;
 }   
+double Camera::focalLength() {
+    return (position_ - target_).norm();
+}
+std::pair<double,double> Camera::ViewportLength() {
+    double viewport_h = 2 * std::tan(radians(zoom_)) * focus_dist;
+    double viewport_w = viewport_h * static_cast<double>(1.0 * width/height); 
+
+    return {viewport_w,viewport_h};
+}
+
 
 // =========================Camera==========================
 Camera* Camera::GetCamera(CameraType type, Vec3 position, Vec3 up, Vec3 target, double yaw, double pitch) {
+    // camera_->target_ = target;
      if(camera_ && camera_->type() == type) {
+            camera_->target_ = target;
             return camera_;
         } else {
             Camera* tmp = camera_;
@@ -48,6 +60,7 @@ Camera* Camera::GetCamera(CameraType type, Vec3 position, Vec3 up, Vec3 target, 
                     break;
             }
             delete tmp;
+            camera_->target_ = target;
             return camera_;
         }
 }
@@ -60,7 +73,9 @@ Camera::Camera(Vec3 position, Vec3 up, double yaw, double pitch): position_(posi
         sensiticity_(SENSITIVITY),
         zoom_(ZOOM) 
         {
-            updateCameraVectors();
+            if(type_ != NONE) {
+                updateCameraVectors();
+            }
         }
 Camera::Camera(double posX, double posY, double posZ, double upX, double upY, double upZ, double yaw, double pitch):
         position_{posX, posY, posZ}, 

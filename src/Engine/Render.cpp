@@ -70,7 +70,7 @@ void Render::triangle(Node* nodes) {
     glBegin(GL_POINTS);
     for(int i = std::max(0, bbox[2]); i <= std::min( width, bbox[3]); ++i) {
         for(int j = std::max(0, bbox[0]); j <= std::min(height, bbox[1]); ++j) {
-            Vec3 vec = barycentric(nodes, {i, j, 0});
+            Vec3 vec = barycentric(nodes, Vec3{i, j, 0});
             if(vec.x() < 0 || vec.y() < 0 || vec.z() < 0) {
                 continue;
             }
@@ -88,7 +88,7 @@ void Render::triangle(Node* nodes) {
                 if(!flag) {
                     image_.set(i, j, color);
                     // TODO
-                    glColor3f(1.0f * color[2] / 255.0f, 1.0 * color[1] / 255.0f, 1.0 * color[0] / 255.0f);
+                    glColor3f(1.0f * color[0] / 255.0f, 1.0 * color[1] / 255.0f, 1.0 * color[2] / 255.0f);
                     glVertex3f( 1.0 * i / width * 2.0 - 1. , 1.0 * j / height * 2.0 - 1., 0.0);
                 }
             }
@@ -97,7 +97,7 @@ void Render::triangle(Node* nodes) {
     glEnd();
     // printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~`\n");
 }
-void Render::render() {;
+void Render::render(const Scene& scene) {;
     // view矩阵
     Mat4 view_matrix = camera->getViewMatrix();
     // 投影矩阵
@@ -325,21 +325,21 @@ bool inCycle(Vec3 vec, Vec3 center, double radius) {
          (vec.y() - center.y()) * (vec.y() - center.y())) <= radius;
 }
 
-void TestRender::render() {
-    glBegin(GL_POINTS);
-    // printf("--------------------\n");
-    Scene scene;
-    Vec3 center{0, 0, 0};
-    for(int i = 0; i < width; ++i) {
-        for(int j = 0; j < height; ++j) {
-            Ray ray(center, Vec3{1.0 * i, 1.0 * j, -255.0});
-            TGAColor color = scene.color(ray);
-            // if(color[0] != 255) {
-            glColor3f(1.0f * color[0] / 255.0f, 1.0 * color[1] / 255.0f, 1.0 * color[2] / 255.0f);
-            glVertex3f(1.0f * i / width * 2 - 1, 1.0f * j / height* 2 - 1, 0.0f);
-            // }
-        }
-    }
-    glEnd();
+void TestRender::render(const Scene& scene) {
+    // glBegin(GL_POINTS);
+    // // printf("--------------------\n");
+    // Scene scene;
+    // Vec3 center{0, 0, 0};
+    // for(int i = 0; i < width; ++i) {
+    //     for(int j = 0; j < height; ++j) {
+    //         Ray ray(center, Vec3{1.0 * i, 1.0 * j, -255.0});
+    //         TGAColor color = scene.color(ray);
+    //         // if(color[0] != 255) {
+    //         glColor3f(1.0f * color[0] / 255.0f, 1.0 * color[1] / 255.0f, 1.0 * color[2] / 255.0f);
+    //         glVertex3f(1.0f * i / width * 2 - 1, 1.0f * j / height* 2 - 1, 0.0f);
+    //         // }
+    //     }
+    // }
+    // glEnd();
 }
 }

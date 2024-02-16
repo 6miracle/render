@@ -1,6 +1,10 @@
 #include "Scene.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Model/Model.h"
+#include "maths/maths.hpp"
+#include "texture.hpp"
 #include "tgaimage.h"
+#include <limits>
 #include <numbers>
 
 namespace render {
@@ -76,7 +80,7 @@ double hitSphere(const Vec3& center, double radius, const Ray& ray) {
 
 
 TGAColor Scene::color( Ray& r) {
-    double res = hitSphere(Vec3{0.5, 0.5, -1.0f}, 0.5, r);
+    double res = hitSphere(Vec3{0.5, 0.5, -1.0f}, 10, r);
     if(res >= 0) {
         Vec3 n = (r.at(res) - Vec3{0.0, 0.0, -1.0f}).normalized();
         return TGAColor{static_cast<unsigned char>(255 * 0.5 *(n.x() + 1)), 
@@ -88,5 +92,46 @@ TGAColor Scene::color( Ray& r) {
     return TGAColor{255, 255, 255} *  (1.0-a) + TGAColor{(uint8_t)(255 * 0.5), (uint8_t)(255 * 0.7), 255} * a;
     // return TGAColor{255, 255,255,255};
     // return TGAColor{255, 255}
+}
+
+
+Vec3 random_on_hemisphere(const Vec3& normal) {
+    Vec3 vec = random_unit_vector();
+    return normal * vec >= 0.0 ? vec : -1 * vec;
+}
+
+
+
+Vec3 Scene::castRay(const Ray &ray, int depth) const {
+    if(depth >= maxDepth) {
+        return Vec3{0.0,0.0, 0.0};
+    }
+    Intersection rec;
+    bool flag = false;
+    Intersection pos;
+    double tFar = std::numeric_limits<double>::infinity();
+    double ray_tmin = 0.001; // 避免浮点误差，导致从物体表面射出的光线与物体相交
+    for(const auto& model : models_) {
+        if(model->hit(ray, ray_tmin, tFar, pos)) {
+            flag = true;
+            tFar = pos.t; 
+            rec = pos;
+        }
+    }
+    // 如果光线没有击中任何物体
+    if(!flag) {
+        return background_;
+    }
+    Ray scatted;
+    Vec3 albedo;
+    Vec3 emitColor = rec.mat->emitted(rec.uv, rec.p);
+    if(!pos.mat->scatter(ray, pos, albedo, scatted)) {
+        return emitColor;
+    }
+    // 自发光项 + 反射/折射
+    return emitColor + albedo.mul(castRay(scatted, depth + 1));
+}
+void Scene::sampleLight(Intersection& pos) const {
+    return ;
 }
 }

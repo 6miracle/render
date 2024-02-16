@@ -1,6 +1,7 @@
 #ifndef __RENDER_TGAIMAGE_H__
 #define __RENDER_TGAIMAGE_H__
 #include "pch.h"
+#include "texture.hpp"
 #include <fstream>
 #include <initializer_list>
 #include <stdint.h>
@@ -25,28 +26,7 @@ struct TGAHeader {
 };
 #pragma pack(pop)
 
-struct TGAColor {
-    uint8_t bgra[4]{0};
-    uint8_t bytespp = 4;
-    TGAColor() = default;
-    TGAColor(const std::initializer_list<uint8_t>& list);
-    uint8_t& operator[](const int i) { return bgra[i]; }
-    TGAColor& operator*(double val);
-    Vec3 toVec3() const { return Vec3{bgra[2], bgra[1], bgra[0]}; }
-    Vec4 toVec4() const { return Vec4{bgra[3], bgra[2], bgra[1], bgra[0]}; }
-    TGAColor operator+(const TGAColor& color) { 
-        TGAColor result;
-        for(int i = 0; i < 4; ++i) {
-            result.bgra[0] = std::min(bgra[0] +color.bgra[0], 255);
-            result.bgra[1] = std::min(bgra[1] +color.bgra[1], 255);
-            result.bgra[2] = std::min(bgra[2] +color.bgra[2], 255);
-            result.bgra[3] = std::min(bgra[3] +color.bgra[3], 255);
-        }
-        return result;
-     }
-};
-
-class TGAImage {
+class TGAImage: public Texture {
 public:
     enum Format { GRAYSCALE = 1,  RGB = 3, RGBA = 4 };
 
@@ -56,6 +36,7 @@ public:
     bool read_tga_file(const std::string filename);
     bool write_tga_file(const std::string filename, const bool vfilp = true, const bool rle = true) const;
     TGAColor get(const int w, const int h) const;
+    // Vec3 value(Vec2 uv, const Vec3& p) const;
     void set(const int w, const int h, const TGAColor& color);
 
     void flip_horizontally();

@@ -103,6 +103,7 @@ bool TGAImage::write_tga_file(const std::string filename, const bool vfilp, cons
         return false;
     }
     os.close();
+    std::clog << "\rWite Over.                 \n";
     return true;
 }
 
@@ -216,6 +217,10 @@ TGAColor TGAImage::get(const int w, const int h) const {
     return color;
 }
 
+// Vec3 TGAImage::value(Vec2 uv, const Vec3& p) const {
+    
+// }
+
 void TGAImage::set(const int w, const int h,const  TGAColor& color) {
     if(!data_.size() || w < 0 || h < 0 || w >= w_ || h >= h_) {
         // LOG("set error, size = %zu w = %d, h = %d", data_.size(), w, h);
@@ -266,6 +271,18 @@ TGAColor::TGAColor(const std::initializer_list<uint8_t>& list) {
         if(num == 4) { break; }
     }
 }
+
+
+
+// TGAColor::TGAColor(const std::initializer_list<double>& list) {
+//     int num = 0;
+//     for(double v : list) {
+//         v = std::max(0.0, std::min(1.0, v));
+//         bgra[num++] = v * 255;
+//         if(num == 4) { break; }
+//     }
+// }
+
 TGAColor& TGAColor::operator*(double val) {
     bgra[0] = std::min((uint8_t)255, (uint8_t)(bgra[0] * val));
     bgra[1] =  std::min((uint8_t)255, (uint8_t)(bgra[1] * val));
